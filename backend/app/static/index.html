@@ -1,0 +1,1292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TouchSpeak AI Demonstration Client</title>
+    <!-- Google Fonts & Material Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    
+    <style>
+        :root {
+            --primary: #2A6FDB;
+            --primary-hover: #1e5ab8;
+            --primary-light: #eef4fe;
+            --danger: #d9534f;
+            --danger-hover: #c9302c;
+            --success: #6fbf73;
+            --warning: #e0b03a;
+            --dark: #121824;
+            --light: #f8fafc;
+            --text-dark: #0f172a;
+            --text-light: #ffffff;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --radius-lg: 24px;
+            --radius-md: 16px;
+            --radius-sm: 8px;
+            
+            --tile-food: #E07A34;
+            --tile-water: #2A9DD9;
+            --tile-medicine: #6FBF73;
+            --tile-restroom: #8E7CC3;
+            --tile-pain: #D9534F;
+            --tile-help: #E0B03A;
+            
+            --tile-happy: #F2B705;
+            --tile-sad: #4F7CAC;
+            --tile-angry: #D9534F;
+            --tile-scared: #8E7CC3;
+            --tile-tired: #6C757D;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+            color: var(--text-dark);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        header {
+            background-color: white;
+            padding: 16px 24px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        h1 {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 700;
+            font-size: 26px;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .lang-switch {
+            display: flex;
+            background-color: var(--light);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 4px;
+        }
+
+        .lang-btn {
+            background: none;
+            border: none;
+            padding: 8px 16px;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-muted);
+            border-radius: calc(var(--radius-md) - 4px);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .lang-btn.active {
+            background-color: var(--primary);
+            color: var(--text-light);
+            box-shadow: 0 4px 6px -1px rgb(42 111 219 / 0.3);
+        }
+
+        .profile-chip {
+            background-color: var(--primary-light);
+            color: var(--primary);
+            padding: 8px 16px;
+            border-radius: var(--radius-md);
+            font-size: 14px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+
+        main {
+            flex: 1;
+            max-width: 1200px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        /* Predictor strip */
+        .predictor-container {
+            background-color: white;
+            padding: 16px 20px;
+            border-radius: var(--radius-md);
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .section-label {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .prediction-chips {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .prediction-chip {
+            background-color: var(--primary);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 9999px;
+            font-family: inherit;
+            font-size: 16px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 6px -1px rgb(42 111 219 / 0.2);
+            transition: all 0.2s ease;
+        }
+
+        .prediction-chip:hover {
+            background-color: var(--primary-hover);
+            transform: translateY(-2px);
+        }
+
+        .cold-start-indicator {
+            color: var(--text-muted);
+            font-style: italic;
+            font-size: 14px;
+        }
+
+        /* Nav tabs */
+        .board-nav {
+            display: flex;
+            background-color: white;
+            border-radius: var(--radius-md);
+            padding: 6px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+        }
+
+        .nav-tab {
+            flex: 1;
+            background: none;
+            border: none;
+            padding: 14px;
+            font-family: 'Outfit', sans-serif;
+            font-weight: 600;
+            font-size: 16px;
+            color: var(--text-muted);
+            border-radius: calc(var(--radius-md) - 2px);
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .nav-tab.active {
+            background-color: var(--primary-light);
+            color: var(--primary);
+        }
+
+        /* Grid sections */
+        .board-section {
+            display: none;
+        }
+
+        .board-section.active {
+            display: block;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+        }
+
+        .tile {
+            aspect-ratio: 1.2;
+            color: white;
+            border: none;
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            box-shadow: 0 8px 16px -4px rgb(0 0 0 / 0.1);
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .tile:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 12px 20px -4px rgb(0 0 0 / 0.15);
+            filter: brightness(1.05);
+        }
+
+        .tile:active {
+            transform: scale(0.96);
+        }
+
+        .tile .material-icons {
+            font-size: 56px;
+        }
+
+        .tile-label {
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+        }
+
+        /* Sidebar stats & history */
+        .data-panel {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 24px;
+        }
+
+        @media (max-width: 768px) {
+            .data-panel {
+                grid-template-columns: 1fr;
+            }
+            .grid {
+                grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            }
+            .tile {
+                padding: 16px;
+            }
+            .tile .material-icons {
+                font-size: 40px;
+            }
+            .tile-label {
+                font-size: 18px;
+            }
+        }
+
+        .container-box {
+            background-color: white;
+            border-radius: var(--radius-md);
+            padding: 24px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .container-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-dark);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .history-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: 350px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            padding: 12px 16px;
+            background-color: var(--light);
+            border-radius: var(--radius-sm);
+            border-left: 4px solid var(--primary);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .history-text {
+            font-weight: 500;
+            font-size: 15px;
+        }
+
+        .history-time {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .frequent-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .frequent-item {
+            padding: 10px 14px;
+            background-color: var(--light);
+            border-radius: var(--radius-sm);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .frequent-details {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .count-badge {
+            background-color: var(--primary-light);
+            color: var(--primary);
+            font-size: 12px;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 999px;
+        }
+
+        /* SOS Popups / Floating SOS */
+        .sos-floating-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background-color: var(--danger);
+            color: white;
+            border: none;
+            border-radius: 9999px;
+            padding: 16px 28px;
+            font-family: 'Outfit', sans-serif;
+            font-size: 20px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 10px 25px -5px rgb(217 83 79 / 0.5);
+            cursor: pointer;
+            z-index: 999;
+            transition: all 0.3s ease;
+        }
+
+        .sos-floating-btn:hover {
+            background-color: var(--danger-hover);
+            transform: scale(1.05);
+            box-shadow: 0 15px 30px -5px rgb(217 83 79 / 0.6);
+        }
+
+        /* Dialog overlays */
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .dialog {
+            background-color: white;
+            border-radius: var(--radius-lg);
+            padding: 32px;
+            max-width: 480px;
+            width: 90%;
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            text-align: center;
+        }
+
+        .dialog-icon {
+            font-size: 64px;
+            color: var(--danger);
+        }
+
+        .dialog-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .dialog-desc {
+            font-size: 15px;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+
+        .dialog-btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: var(--radius-md);
+            padding: 14px 28px;
+            font-family: inherit;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .dialog-btn:hover {
+            background-color: var(--primary-hover);
+        }
+
+        /* Voice settings panel */
+        .voice-settings {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 10px 16px;
+            background-color: var(--light);
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border);
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+
+        .voice-settings label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+        }
+
+        .voice-settings input {
+            cursor: pointer;
+        }
+
+        /* Onboarding overlays */
+        .onboard-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--dark);
+            z-index: 2000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            padding: 24px;
+        }
+
+        .onboard-card {
+            background-color: white;
+            border-radius: var(--radius-lg);
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            animation: slideUp 0.4s ease-out;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(30px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .onboard-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--primary);
+            text-align: center;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        .form-input {
+            padding: 14px 18px;
+            border-radius: var(--radius-md);
+            border: 2px solid var(--border);
+            font-family: inherit;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .form-input:focus {
+            border-color: var(--primary);
+        }
+
+        .onboard-btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: var(--radius-md);
+            padding: 16px;
+            font-family: 'Outfit', sans-serif;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 10px-1px rgb(42 111 219 / 0.3);
+            transition: all 0.2s;
+        }
+
+        .onboard-btn:hover {
+            background-color: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Onboarding Panel (if user_id does not exist) -->
+    <div id="onboard-panel" class="onboard-overlay">
+        <div class="onboard-card">
+            <h2 class="onboard-title">Welcome to TouchSpeak AI</h2>
+            <p style="color: var(--text-muted); text-align: center; font-size: 15px;">Setup your local speaker profile to begin generating communication logs and personalized AI suggestions.</p>
+            
+            <div class="form-group">
+                <label class="form-label" for="username-input">Non-verbal Speaker Name</label>
+                <input class="form-input" type="text" id="username-input" placeholder="e.g. Arun Kumar" value="Demo Speaker">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="lang-select">Default Language</label>
+                <select class="form-input" id="lang-select">
+                    <option value="en">English</option>
+                    <option value="ta">Tamil (தமிழ்)</option>
+                    <option value="hi">Hindi (हिन्दी)</option>
+                </select>
+            </div>
+
+            <button class="onboard-btn" onclick="submitOnboarding()">Create Profile</button>
+            <p style="text-align: center; font-size: 13px;"><a href="#" style="color: var(--primary);" onclick="useSeededDemoUser()">Or use pre-seeded local database Demo User</a></p>
+        </div>
+    </div>
+
+    <!-- SOS Triggered Dialog -->
+    <div id="sos-overlay" class="overlay" onclick="closeSOSDialog()">
+        <div class="dialog" onclick="event.stopPropagation()">
+            <span class="material-icons dialog-icon">sos</span>
+            <h3 class="dialog-title" id="sos-title">Calling for Help!</h3>
+            <p class="dialog-desc" id="sos-description">Your location data has been retrieved and is being packaged for transmission to your caregiver.</p>
+            <button class="dialog-btn" onclick="closeSOSDialog()">Dismiss Alert</button>
+        </div>
+    </div>
+
+    <header>
+        <h1><span class="material-icons" style="font-size: 32px;">hearing</span> TouchSpeak AI</h1>
+        
+        <div class="header-controls">
+            <!-- Speech mode selection -->
+            <div class="voice-settings">
+                <span class="material-icons" style="font-size: 20px;">volume_up</span>
+                <label>
+                    <input type="checkbox" id="backend-tts-toggle">
+                    Use Backend Cloud TTS Fallback
+                </label>
+            </div>
+
+            <!-- Language switches -->
+            <div class="lang-switch" id="lang-switch-container">
+                <button class="lang-btn active" onclick="setLanguage('en')">EN</button>
+                <button class="lang-btn" onclick="setLanguage('ta')">TA</button>
+                <button class="lang-btn" onclick="setLanguage('hi')">HI</button>
+            </div>
+            
+            <div class="profile-chip" onclick="resetProfile()">
+                <span class="material-icons">account_circle</span>
+                <span id="display-name">Active Local User</span>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <!-- AI Predictions Strip -->
+        <div class="predictor-container">
+            <div class="section-label">
+                <span class="material-icons" style="font-size: 16px; color: var(--primary)">auto_awesome</span>
+                AI Phrase Prediction Suggestions (Quick-Taps)
+            </div>
+            <div class="prediction-chips" id="prediction-chips-container">
+                <!-- Loaded dynamically -->
+                <span class="cold-start-indicator">Predicting recommendations... Select some icons below!</span>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="board-nav">
+            <button class="nav-tab active" onclick="switchTab('needs')">
+                <span class="material-icons">grid_view</span> Needs Board
+            </button>
+            <button class="nav-tab" onclick="switchTab('emotions')">
+                <span class="material-icons">emoji_emotions</span> Feelings
+            </button>
+        </div>
+
+        <!-- Grid Boards -->
+        <div id="needs" class="board-section active">
+            <div class="grid" id="needs-grid">
+                <!-- Needs Tiles -->
+                <button class="tile" style="background-color: var(--tile-food);" onclick="tapIcon('food', 'Food')">
+                    <span class="material-icons">restaurant</span>
+                    <span class="tile-label">Food</span>
+                </button>
+                <button class="tile" style="background-color: var(--tile-water);" onclick="tapIcon('water', 'Water')">
+                    <span class="material-icons">water_drop</span>
+                    <span class="tile-label">Water</span>
+                </button>
+                <button class="tile" style="background-color: var(--tile-medicine);" onclick="tapIcon('medicine', 'Medicine')">
+                    <span class="material-icons">medication</span>
+                    <span class="tile-label">Medicine</span>
+                </button>
+                <button class="tile" style="background-color: var(--tile-restroom);" onclick="tapIcon('restroom', 'Restroom')">
+                    <span class="material-icons">wc</span>
+                    <span class="tile-label">Restroom</span>
+                </button>
+                <button class="tile" style="background-color: var(--tile-pain);" onclick="tapIcon('pain', 'Pain')">
+                    <span class="material-icons">healing</span>
+                    <span class="tile-label">Pain</span>
+                </button>
+                <button class="tile" style="background-color: var(--tile-help);" onclick="tapIcon('help', 'Help')">
+                    <span class="material-icons">pan_tool</span>
+                    <span class="tile-label">Help</span>
+                </button>
+            </div>
+        </div>
+
+        <div id="emotions" class="board-section">
+            <div class="grid" id="emotions-grid">
+                <!-- Emotion Tiles -->
+                <button class="tile" style="background-color: var(--tile-happy);" onclick="tapIcon('happy', 'Happy')">
+                    <span class="material-icons">sentiment_very_satisfied</span>
+                    <span class="tile-label">Happy</span>
+                </button>
+                <button class="tile" style="background-color: var(--tile-sad);" onclick="tapIcon('sad', 'Sad')">
+                    <span class="material-icons">sentiment_dissatisfied</span>
+                    <span class="tile-label">Sad</span>
+                </button>
+                <button class="tile" style="background-color: var(--tile-angry);" onclick="tapIcon('angry', 'Angry')">
+                    <span class="material-icons">sentiment_very_dissatisfied</span>
+                    <span class="tile-label">Angry</span>
+                </button>
+                <button class="tile" style="background-color: var(--tile-scared);" onclick="tapIcon('scared', 'Scared')">
+                    <span class="material-icons">sentiment_neutral</span>
+                    <span class="tile-label">Scared</span>
+                </button>
+                <button class="tile" style="background-color: var(--tile-tired);" onclick="tapIcon('tired', 'Tired')">
+                    <span class="material-icons">bedtime</span>
+                    <span class="tile-label">Tired</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Logs & Stats Panel -->
+        <div class="data-panel">
+            <div class="container-box">
+                <div class="container-title">
+                    <span>Recent History Log</span>
+                    <span class="material-icons" style="font-size: 20px; color: var(--text-muted);">history</span>
+                </div>
+                <ul class="history-list" id="history-list-elem">
+                    <!-- Dynamic -->
+                </ul>
+            </div>
+            
+            <div class="container-box">
+                <div class="container-title">
+                    <span>Frequently Tapped</span>
+                    <span class="material-icons" style="font-size: 20px; color: var(--warning);">star</span>
+                </div>
+                <ul class="frequent-list" id="frequent-list-elem">
+                    <!-- Dynamic -->
+                </ul>
+            </div>
+        </div>
+    </main>
+
+    <!-- Floating SOS Trigger -->
+    <button class="sos-floating-btn" onclick="triggerSOS()">
+        <span class="material-icons" style="font-size: 28px;">sos</span>
+        SOS ALERT
+    </button>
+
+    <script>
+        // API Base URL (relative to this host)
+        const apiBase = window.location.origin + '/api';
+        
+        // State variables
+        let userId = localStorage.getItem('touchspeak_user_id');
+        let userName = localStorage.getItem('touchspeak_user_name') || 'Active User';
+        let currentLanguage = localStorage.getItem('touchspeak_language') || 'en';
+        let vocabulary = {};
+
+        // On Page Load
+        window.addEventListener('DOMContentLoaded', () => {
+            initApp();
+        });
+
+        // Initialize App State
+        async function initApp() {
+            if (!userId) {
+                // Show Onboarding overlay
+                document.getElementById('onboard-panel').style.display = 'flex';
+                return;
+            }
+            
+            // Set Onboarded Info
+            document.getElementById('display-name').innerText = userName;
+            updateLangUI();
+            
+            // Load vocabulary from backend
+            try {
+                const response = await fetch(`${apiBase}/communication/icons`);
+                if (response.ok) {
+                    const data = await response.json();
+                    vocabulary = data.phrases;
+                    console.log("Loaded vocabulary phrases: ", vocabulary);
+                }
+            } catch (err) {
+                console.error("Could not fetch remote communication library details", err);
+            }
+            
+            // Load data streams
+            refreshData();
+        }
+
+        // Handle language switcher UI
+        function updateLangUI() {
+            const btns = document.querySelectorAll('.lang-btn');
+            btns.forEach(btn => {
+                if (btn.innerText.toLowerCase() === currentLanguage) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+        }
+
+        // Set Language State
+        function setLanguage(lang) {
+            currentLanguage = lang;
+            localStorage.setItem('touchspeak_language', lang);
+            updateLangUI();
+            
+            // Refresh prediction display translations
+            loadPredictions();
+            
+            // Optional: update preferences on server if user profile synced
+            if (userId) {
+                fetch(`${apiBase}/users/${userId}/preferences`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ preferred_language: lang })
+                }).catch(err => console.log("Failed to sync preference: ", err));
+            }
+        }
+
+        // Onboarding Form Complete
+        async function submitOnboarding() {
+            const input = document.getElementById('username-input');
+            const langSelect = document.getElementById('lang-select');
+            const nameValue = input.value.trim() || 'Demo Speaker';
+            const langValue = langSelect.value;
+
+            try {
+                const response = await fetch(`${apiBase}/users`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: nameValue,
+                        preferred_language: langValue,
+                        age: 12,
+                        caregiver: {
+                            name: "Demo Caregiver",
+                            phone: "+919876543210",
+                            email: "caregiver@demo.com"
+                        }
+                    })
+                });
+
+                if (response.ok) {
+                    const user = await response.json();
+                    userId = user._id;
+                    userName = user.name;
+                    currentLanguage = user.preferred_language;
+
+                    localStorage.setItem('touchspeak_user_id', userId);
+                    localStorage.setItem('touchspeak_user_name', userName);
+                    localStorage.setItem('touchspeak_language', currentLanguage);
+
+                    document.getElementById('onboard-panel').style.display = 'none';
+                    initApp();
+                } else {
+                    alert("Failed to register speaker profile. Please try again.");
+                }
+            } catch (err) {
+                alert("Connection refused by the Flask server. Is it running? Error: " + err);
+            }
+        }
+
+        // Onboarding Fallback: Seeded User ID
+        async function useSeededDemoUser() {
+            // Find existing user OR register a local profile named "Demo User"
+            try {
+                // Register a profile or use a static seeded profile
+                const response = await fetch(`${apiBase}/users`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: "Demo User",
+                        preferred_language: "en",
+                        age: 10,
+                        caregiver: {
+                            name: "Demo Caregiver",
+                            phone: "+910000000000",
+                            email: "demo@example.com"
+                        }
+                    })
+                });
+                
+                let profile;
+                if (response.ok) {
+                    profile = await response.json();
+                } else {
+                    // Try setting it manually
+                    profile = { _id: "6a49557193813a68d03ff4dd", name: "Demo User", preferred_language: "en" };
+                }
+
+                userId = profile._id;
+                userName = profile.name;
+                currentLanguage = profile.preferred_language;
+
+                localStorage.setItem('touchspeak_user_id', userId);
+                localStorage.setItem('touchspeak_user_name', userName);
+                localStorage.setItem('touchspeak_language', currentLanguage);
+
+                document.getElementById('onboard-panel').style.display = 'none';
+                initApp();
+            } catch (err) {
+                // Fallback to local hardcoded mock
+                userId = "6a49557193813a68d03ff4dd";
+                userName = "Demo User";
+                currentLanguage = "en";
+                localStorage.setItem('touchspeak_user_id', userId);
+                localStorage.setItem('touchspeak_user_name', userName);
+                localStorage.setItem('touchspeak_language', currentLanguage);
+                document.getElementById('onboard-panel').style.display = 'none';
+                initApp();
+            }
+        }
+
+        // Log out / Onboarding reset
+        function resetProfile() {
+            if (confirm("Reset current user profile?")) {
+                localStorage.removeItem('touchspeak_user_id');
+                localStorage.removeItem('touchspeak_user_name');
+                location.reload();
+            }
+        }
+
+        // Tab selection switcher
+        function switchTab(tabId) {
+            // Hide all tabs
+            document.querySelectorAll('.board-section').forEach(sec => sec.classList.remove('active'));
+            document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
+
+            // Show active tab
+            document.getElementById(tabId).classList.add('active');
+            
+            // Set tab button active
+            const btn = document.querySelector(`.nav-tab[onclick*="${tabId}"]`);
+            if (btn) btn.classList.add('active');
+        }
+
+        // Refresh dynamic UI components
+        function refreshData() {
+            loadPredictions();
+            loadHistory();
+            loadFrequent();
+        }
+
+        // Load AI suggestions from Flask
+        async function loadPredictions() {
+            if (!userId) return;
+            const container = document.getElementById('prediction-chips-container');
+            
+            try {
+                const response = await fetch(`${apiBase}/predict/${userId}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    const list = data.predictions;
+                    if (list && list.length > 0) {
+                        container.innerHTML = '';
+                        list.forEach(p => {
+                            // Find phrase text for current language, fallback to english or icon ID
+                            let phrase = p.phrase_text || p.icon_id;
+                            if (vocabulary[p.icon_id]) {
+                                phrase = vocabulary[p.icon_id][currentLanguage] || vocabulary[p.icon_id]['en'] || phrase;
+                            }
+                            
+                            const btn = document.createElement('button');
+                            btn.className = 'prediction-chip';
+                            btn.innerHTML = `<span class="material-icons" style="font-size: 16px">auto_awesome</span> ${phrase}`;
+                            btn.onclick = () => selectPhrase(p.icon_id, phrase);
+                            container.appendChild(btn);
+                        });
+                    } else {
+                        container.innerHTML = '<span class="cold-start-indicator">No recommendations available. Select icons to train the model.</span>';
+                    }
+                }
+            } catch (err) {
+                console.error("Predictions fetch error: ", err);
+                container.innerHTML = '<span class="cold-start-indicator">Offline mode: select icons below to log locally.</span>';
+            }
+        }
+
+        // Load Tapped History from Flask
+        async function loadHistory() {
+            if (!userId) return;
+            const listElem = document.getElementById('history-list-elem');
+            
+            try {
+                const response = await fetch(`${apiBase}/communication/history/${userId}?limit=8`);
+                if (response.ok) {
+                    const list = await response.json();
+                    listElem.innerHTML = '';
+                    if (list.length === 0) {
+                        listElem.innerHTML = '<li style="padding: 10px; color: var(--text-muted); text-align: center;">No logs yet. Tap icons above!</li>';
+                        return;
+                    }
+                    list.forEach(item => {
+                        const li = document.createElement('li');
+                        li.className = 'history-item';
+                        
+                        const time = new Date(item.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                        li.innerHTML = `
+                            <span class="history-text">${item.phrase_text}</span>
+                            <span class="history-time">${time} (${item.language.toUpperCase()})</span>
+                        `;
+                        listElem.appendChild(li);
+                    });
+                }
+            } catch (err) {
+                console.error("History fetch error: ", err);
+            }
+        }
+
+        // Load Top frequent phrases from Flask
+        async function loadFrequent() {
+            if (!userId) return;
+            const listElem = document.getElementById('frequent-list-elem');
+            
+            try {
+                const response = await fetch(`${apiBase}/communication/frequent/${userId}?limit=5`);
+                if (response.ok) {
+                    const list = await response.json();
+                    listElem.innerHTML = '';
+                    if (list.length === 0) {
+                        listElem.innerHTML = '<li style="padding: 10px; color: var(--text-muted); text-align: center;">Tap icons to compile statistics.</li>';
+                        return;
+                    }
+                    list.forEach(item => {
+                        const li = document.createElement('li');
+                        li.className = 'frequent-item';
+                        li.innerHTML = `
+                            <div class="frequent-details">
+                                <span class="material-icons" style="font-size: 16px; color: var(--primary);">chat_bubble_outline</span>
+                                <span class="history-text">${item.phrase_text}</span>
+                            </div>
+                            <span class="count-badge">${item.use_count}x</span>
+                        `;
+                        listElem.appendChild(li);
+                    });
+                }
+            } catch (err) {
+                console.log("Frequent logs fetch error: ", err);
+            }
+        }
+
+        // Tap on grid icon
+        async function tapIcon(iconId, defaultLabel) {
+            // Find phrase for current lang
+            let phrase = defaultLabel;
+            if (vocabulary[iconId]) {
+                phrase = vocabulary[iconId][currentLanguage] || vocabulary[iconId]['en'] || phrase;
+            }
+            
+            // Immediate Speech synthesis
+            speakText(phrase);
+            
+            // Post select to Flask
+            if (userId) {
+                try {
+                    const response = await fetch(`${apiBase}/communication/select`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            user_id: userId,
+                            icon_id: iconId,
+                            language: currentLanguage
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        // Refresh history & predictions
+                        setTimeout(refreshData, 100);
+                    }
+                } catch (err) {
+                    console.error("Failed to log icon tap to server: ", err);
+                }
+            }
+        }
+
+        // Tap on prediction chip
+        async function selectPhrase(iconId, phraseText) {
+            // Immediate speech synthesis
+            speakText(phraseText);
+            
+            // Post selection record to backend
+            if (userId) {
+                try {
+                    await fetch(`${apiBase}/communication/select`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            user_id: userId,
+                            icon_id: iconId,
+                            language: currentLanguage
+                        })
+                    });
+                    
+                    // Refresh
+                    setTimeout(refreshData, 100);
+                } catch (err) {
+                    console.error("Failed to log predictions select: ", err);
+                }
+            }
+        }
+
+        // Text to Speech logic
+        async function speakText(text) {
+            const useBackendTts = document.getElementById('backend-tts-toggle').checked;
+            
+            if (useBackendTts) {
+                console.log("Synthesizing audio via Flask Backend TTS Fallback...");
+                try {
+                    const response = await fetch(`${apiBase}/tts/speak`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            text: text,
+                            language: currentLanguage
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        const base64Audio = data.audio_base64;
+                        
+                        // Play base64 audio block in browser
+                        const audioBlob = base64ToBlob(base64Audio, 'audio/mp3');
+                        const audioUrl = URL.createObjectURL(audioBlob);
+                        const audio = new Audio(audioUrl);
+                        audio.play();
+                        
+                        if (data.is_mock) {
+                            console.warn("Backend returned mock silence placeholder. Fallback to Web Speech API client.");
+                            speakBrowserSpeech(text);
+                        }
+                    } else {
+                        // Fallback browser speech
+                        speakBrowserSpeech(text);
+                    }
+                } catch (err) {
+                    console.error("TTS Server unreachable, using local Web Speech API: ", err);
+                    speakBrowserSpeech(text);
+                }
+            } else {
+                // Local speech engine
+                speakBrowserSpeech(text);
+            }
+        }
+
+        // Browser local Speech Synthesis (Web Speech API)
+        function speakBrowserSpeech(text) {
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(text);
+                
+                // Map current UI language to browser voice locales
+                const voicesMap = {
+                    'en': 'en-IN',
+                    'ta': 'ta-IN',
+                    'hi': 'hi-IN'
+                };
+                
+                utterance.lang = voicesMap[currentLanguage] || 'en-IN';
+                utterance.rate = 0.85; // slightly slower for speech clarity
+                window.speechSynthesis.speak(utterance);
+            } else {
+                console.error("Web Speech API not supported in this browser.");
+            }
+        }
+
+        // Helper: Convert base64 string to audio Binary Blob
+        function base64ToBlob(base64, mimeType) {
+            const byteCharacters = atob(base64);
+            const byteNumbers = new Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            return new Blob([byteArray], { type: mimeType });
+        }
+
+        // SOS Button triggered
+        function triggerSOS() {
+            const dialogOverlay = document.getElementById('sos-overlay');
+            const titleElem = document.getElementById('sos-title');
+            const descElem = document.getElementById('sos-description');
+            
+            titleElem.innerText = "Trigging SOS Help...";
+            descElem.innerHTML = "Accessing GPS location and packaging alert payloads...";
+            dialogOverlay.style.display = 'flex';
+            
+            // Speak emergency trigger
+            speakText("Sending emergency alert! I need help immediately!");
+
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    async (position) => {
+                        const lat = position.coords.latitude;
+                        const lng = position.coords.longitude;
+                        
+                        descElem.innerHTML = `GPS Lock obtained: <b>${lat.toFixed(4)}, ${lng.toFixed(4)}</b>.<br>transmitting SOS to backend MongoDB registry...`;
+                        
+                        if (userId) {
+                            try {
+                                const response = await fetch(`${apiBase}/emergency/sos`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        user_id: userId,
+                                        latitude: lat,
+                                        longitude: lng,
+                                        message: "Emergency! I need help immediately."
+                                    })
+                                });
+                                
+                                if (response.ok) {
+                                    const res = await response.json();
+                                    titleElem.innerText = "Caregiver Notified!";
+                                    let caregiverStatus = res.caregiver_notified 
+                                        ? "FCM notification successfully dispatched to registered caregiver device."
+                                        : "SOS logged in database. Caregiver push channel unavailable (SMS fallback recommended).";
+                                    descElem.innerHTML = `Emergency ID: <code>${res.log_id}</code><br>${caregiverStatus}<br>Maps Coordinate: <a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank" style="color: var(--primary);">View on Map</a>`;
+                                    
+                                    // Refresh logs
+                                    refreshData();
+                                } else {
+                                    titleElem.innerText = "Server Error";
+                                    descElem.innerText = "SOS package rejected by server. Call emergency line directly.";
+                                }
+                            } catch (err) {
+                                titleElem.innerText = "Network Error";
+                                descElem.innerText = "Backend server unreachable. Make sure Flask app is active.";
+                            }
+                        }
+                    },
+                    (error) => {
+                        descElem.innerText = "GPS coordinates access blocked/disabled. Transmitting cell-tower fallback details...";
+                        // Transmit default fallback locations
+                        submitSOSFallback(13.0827, 80.2707, "GPS permission denied.");
+                    }
+                );
+            } else {
+                descElem.innerText = "Browser Geolocation unavailable. Transmitting generic location coordinates...";
+                submitSOSFallback(13.0827, 80.2707, "Browser Geolocation unsupported.");
+            }
+        }
+
+        async function submitSOSFallback(lat, lng, reason) {
+            const titleElem = document.getElementById('sos-title');
+            const descElem = document.getElementById('sos-description');
+            
+            if (userId) {
+                try {
+                    const response = await fetch(`${apiBase}/emergency/sos`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            user_id: userId,
+                            latitude: lat,
+                            longitude: lng,
+                            message: `SOS fired. Location access: ${reason}`
+                        })
+                    });
+                    if (response.ok) {
+                        const res = await response.json();
+                        titleElem.innerText = "Alert Registered (Fallback)";
+                        descElem.innerHTML = `Triggered SOS using default/center coordinates. Caregiver notified status: ${res.caregiver_notified}. Log ID: <code>${res.log_id}</code>`;
+                        refreshData();
+                    }
+                } catch (e) {
+                    titleElem.innerText = "Emergency Log Failed";
+                    descElem.innerText = "Server connection timed out.";
+                }
+            }
+        }
+
+        function closeSOSDialog() {
+            document.getElementById('sos-overlay').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
