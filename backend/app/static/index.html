@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,9 +8,11 @@
     <!-- Google Fonts & Material Icons -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Inter:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
-    
+
     <style>
         :root {
             --primary: #2A6FDB;
@@ -28,14 +31,14 @@
             --radius-lg: 24px;
             --radius-md: 16px;
             --radius-sm: 8px;
-            
+
             --tile-food: #E07A34;
             --tile-water: #2A9DD9;
             --tile-medicine: #6FBF73;
             --tile-restroom: #8E7CC3;
             --tile-pain: #D9534F;
             --tile-help: #E0B03A;
-            
+
             --tile-happy: #F2B705;
             --tile-sad: #4F7CAC;
             --tile-angry: #D9534F;
@@ -288,15 +291,19 @@
             .data-panel {
                 grid-template-columns: 1fr;
             }
+
             .grid {
                 grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
             }
+
             .tile {
                 padding: 16px;
             }
+
             .tile .material-icons {
                 font-size: 40px;
             }
+
             .tile-label {
                 font-size: 18px;
             }
@@ -526,8 +533,15 @@
         }
 
         @keyframes slideUp {
-            from { transform: translateY(30px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
+            from {
+                transform: translateY(30px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
         }
 
         .onboard-title {
@@ -584,17 +598,20 @@
         }
     </style>
 </head>
+
 <body>
 
     <!-- Onboarding Panel (if user_id does not exist) -->
     <div id="onboard-panel" class="onboard-overlay">
         <div class="onboard-card">
             <h2 class="onboard-title">Welcome to TouchSpeak AI</h2>
-            <p style="color: var(--text-muted); text-align: center; font-size: 15px;">Setup your local speaker profile to begin generating communication logs and personalized AI suggestions.</p>
-            
+            <p style="color: var(--text-muted); text-align: center; font-size: 15px;">Setup your local speaker profile
+                to begin generating communication logs and personalized AI suggestions.</p>
+
             <div class="form-group">
                 <label class="form-label" for="username-input">Non-verbal Speaker Name</label>
-                <input class="form-input" type="text" id="username-input" placeholder="e.g. Arun Kumar" value="Demo Speaker">
+                <input class="form-input" type="text" id="username-input" placeholder="e.g. Arun Kumar"
+                    value="Demo Speaker">
             </div>
 
             <div class="form-group">
@@ -607,7 +624,8 @@
             </div>
 
             <button class="onboard-btn" onclick="submitOnboarding()">Create Profile</button>
-            <p style="text-align: center; font-size: 13px;"><a href="#" style="color: var(--primary);" onclick="useSeededDemoUser()">Or use pre-seeded local database Demo User</a></p>
+            <p style="text-align: center; font-size: 13px;"><a href="#" style="color: var(--primary);"
+                    onclick="useSeededDemoUser()">Or use pre-seeded local database Demo User</a></p>
         </div>
     </div>
 
@@ -616,14 +634,15 @@
         <div class="dialog" onclick="event.stopPropagation()">
             <span class="material-icons dialog-icon">sos</span>
             <h3 class="dialog-title" id="sos-title">Calling for Help!</h3>
-            <p class="dialog-desc" id="sos-description">Your location data has been retrieved and is being packaged for transmission to your caregiver.</p>
+            <p class="dialog-desc" id="sos-description">Your location data has been retrieved and is being packaged for
+                transmission to your caregiver.</p>
             <button class="dialog-btn" onclick="closeSOSDialog()">Dismiss Alert</button>
         </div>
     </div>
 
     <header>
         <h1><span class="material-icons" style="font-size: 32px;">hearing</span> TouchSpeak AI</h1>
-        
+
         <div class="header-controls">
             <!-- Speech mode selection -->
             <div class="voice-settings">
@@ -640,7 +659,7 @@
                 <button class="lang-btn" onclick="setLanguage('ta')">TA</button>
                 <button class="lang-btn" onclick="setLanguage('hi')">HI</button>
             </div>
-            
+
             <div class="profile-chip" onclick="resetProfile()">
                 <span class="material-icons">account_circle</span>
                 <span id="display-name">Active Local User</span>
@@ -683,11 +702,13 @@
                     <span class="material-icons">water_drop</span>
                     <span class="tile-label">Water</span>
                 </button>
-                <button class="tile" style="background-color: var(--tile-medicine);" onclick="tapIcon('medicine', 'Medicine')">
+                <button class="tile" style="background-color: var(--tile-medicine);"
+                    onclick="tapIcon('medicine', 'Medicine')">
                     <span class="material-icons">medication</span>
                     <span class="tile-label">Medicine</span>
                 </button>
-                <button class="tile" style="background-color: var(--tile-restroom);" onclick="tapIcon('restroom', 'Restroom')">
+                <button class="tile" style="background-color: var(--tile-restroom);"
+                    onclick="tapIcon('restroom', 'Restroom')">
                     <span class="material-icons">wc</span>
                     <span class="tile-label">Restroom</span>
                 </button>
@@ -717,7 +738,8 @@
                     <span class="material-icons">sentiment_very_dissatisfied</span>
                     <span class="tile-label">Angry</span>
                 </button>
-                <button class="tile" style="background-color: var(--tile-scared);" onclick="tapIcon('scared', 'Scared')">
+                <button class="tile" style="background-color: var(--tile-scared);"
+                    onclick="tapIcon('scared', 'Scared')">
                     <span class="material-icons">sentiment_neutral</span>
                     <span class="tile-label">Scared</span>
                 </button>
@@ -739,7 +761,7 @@
                     <!-- Dynamic -->
                 </ul>
             </div>
-            
+
             <div class="container-box">
                 <div class="container-title">
                     <span>Frequently Tapped</span>
@@ -761,7 +783,7 @@
     <script>
         // API Base URL (relative to this host)
         const apiBase = window.location.origin + '/api';
-        
+
         // State variables
         let userId = localStorage.getItem('touchspeak_user_id');
         let userName = localStorage.getItem('touchspeak_user_name') || 'Active User';
@@ -780,11 +802,11 @@
                 document.getElementById('onboard-panel').style.display = 'flex';
                 return;
             }
-            
+
             // Set Onboarded Info
             document.getElementById('display-name').innerText = userName;
             updateLangUI();
-            
+
             // Load vocabulary from backend
             try {
                 const response = await fetch(`${apiBase}/communication/icons`);
@@ -796,7 +818,7 @@
             } catch (err) {
                 console.error("Could not fetch remote communication library details", err);
             }
-            
+
             // Load data streams
             refreshData();
         }
@@ -818,10 +840,10 @@
             currentLanguage = lang;
             localStorage.setItem('touchspeak_language', lang);
             updateLangUI();
-            
+
             // Refresh prediction display translations
             loadPredictions();
-            
+
             // Optional: update preferences on server if user profile synced
             if (userId) {
                 fetch(`${apiBase}/users/${userId}/preferences`, {
@@ -894,7 +916,7 @@
                         }
                     })
                 });
-                
+
                 let profile;
                 if (response.ok) {
                     profile = await response.json();
@@ -943,7 +965,7 @@
 
             // Show active tab
             document.getElementById(tabId).classList.add('active');
-            
+
             // Set tab button active
             const btn = document.querySelector(`.nav-tab[onclick*="${tabId}"]`);
             if (btn) btn.classList.add('active');
@@ -960,7 +982,7 @@
         async function loadPredictions() {
             if (!userId) return;
             const container = document.getElementById('prediction-chips-container');
-            
+
             try {
                 const response = await fetch(`${apiBase}/predict/${userId}`);
                 if (response.ok) {
@@ -974,7 +996,7 @@
                             if (vocabulary[p.icon_id]) {
                                 phrase = vocabulary[p.icon_id][currentLanguage] || vocabulary[p.icon_id]['en'] || phrase;
                             }
-                            
+
                             const btn = document.createElement('button');
                             btn.className = 'prediction-chip';
                             btn.innerHTML = `<span class="material-icons" style="font-size: 16px">auto_awesome</span> ${phrase}`;
@@ -995,7 +1017,7 @@
         async function loadHistory() {
             if (!userId) return;
             const listElem = document.getElementById('history-list-elem');
-            
+
             try {
                 const response = await fetch(`${apiBase}/communication/history/${userId}?limit=8`);
                 if (response.ok) {
@@ -1008,8 +1030,8 @@
                     list.forEach(item => {
                         const li = document.createElement('li');
                         li.className = 'history-item';
-                        
-                        const time = new Date(item.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+
+                        const time = new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                         li.innerHTML = `
                             <span class="history-text">${item.phrase_text}</span>
                             <span class="history-time">${time} (${item.language.toUpperCase()})</span>
@@ -1026,7 +1048,7 @@
         async function loadFrequent() {
             if (!userId) return;
             const listElem = document.getElementById('frequent-list-elem');
-            
+
             try {
                 const response = await fetch(`${apiBase}/communication/frequent/${userId}?limit=5`);
                 if (response.ok) {
@@ -1061,10 +1083,10 @@
             if (vocabulary[iconId]) {
                 phrase = vocabulary[iconId][currentLanguage] || vocabulary[iconId]['en'] || phrase;
             }
-            
+
             // Immediate Speech synthesis
             speakText(phrase);
-            
+
             // Post select to Flask
             if (userId) {
                 try {
@@ -1077,7 +1099,7 @@
                             language: currentLanguage
                         })
                     });
-                    
+
                     if (response.ok) {
                         // Refresh history & predictions
                         setTimeout(refreshData, 100);
@@ -1092,7 +1114,7 @@
         async function selectPhrase(iconId, phraseText) {
             // Immediate speech synthesis
             speakText(phraseText);
-            
+
             // Post selection record to backend
             if (userId) {
                 try {
@@ -1105,7 +1127,7 @@
                             language: currentLanguage
                         })
                     });
-                    
+
                     // Refresh
                     setTimeout(refreshData, 100);
                 } catch (err) {
@@ -1114,12 +1136,41 @@
             }
         }
 
+        // Check if a Tamil voice is available in the browser's speechSynthesis engine
+        function hasTamilSpeechVoice() {
+            if (!('speechSynthesis' in window)) return false;
+            const voices = window.speechSynthesis.getVoices();
+            return voices.some(v =>
+                v.lang.toLowerCase() === 'ta-in' ||
+                v.lang.toLowerCase().startsWith('ta') ||
+                v.name.toLowerCase().includes('tamil')
+            );
+        }
+
         // Text to Speech logic
         async function speakText(text) {
+            console.log(`[TTS] Request to speak text: "${text}" in language: "${currentLanguage}"`);
+
+            if (!currentLanguage) {
+                console.error("[TTS Error] Selected language is not defined.");
+                return;
+            }
+
             const useBackendTts = document.getElementById('backend-tts-toggle').checked;
-            
-            if (useBackendTts) {
-                console.log("Synthesizing audio via Flask Backend TTS Fallback...");
+
+            // Automatically force backend fallback if Tamil is selected but no Tamil voice exists in browser
+            let forceBackend = false;
+            if (currentLanguage === 'ta') {
+                const taAvailable = hasTamilSpeechVoice();
+                console.log(`[TTS Device Check] Tamil browser voice exists: ${taAvailable}`);
+                if (!taAvailable) {
+                    console.log("[TTS Fallback] No Tamil voice exists in local browser. Automatically falling back to Backend Flask TTS API.");
+                    forceBackend = true;
+                }
+            }
+
+            if (useBackendTts || forceBackend) {
+                console.log("[TTS] Synthesizing audio via Flask Backend TTS Fallback...");
                 try {
                     const response = await fetch(`${apiBase}/tts/speak`, {
                         method: 'POST',
@@ -1129,27 +1180,33 @@
                             language: currentLanguage
                         })
                     });
-                    
+
                     if (response.ok) {
                         const data = await response.json();
                         const base64Audio = data.audio_base64;
-                        
+
+                        console.log(`[TTS] Backend synthesis successful, audio stream length: ${base64Audio.length} bytes.`);
                         // Play base64 audio block in browser
                         const audioBlob = base64ToBlob(base64Audio, 'audio/mp3');
                         const audioUrl = URL.createObjectURL(audioBlob);
                         const audio = new Audio(audioUrl);
-                        audio.play();
-                        
+                        audio.play().then(() => {
+                            console.log("[TTS] Audio played successfully from backend synthesis.");
+                        }).catch(playErr => {
+                            console.error("[TTS Error] Failed to play backend audio stream:", playErr);
+                        });
+
                         if (data.is_mock) {
-                            console.warn("Backend returned mock silence placeholder. Fallback to Web Speech API client.");
+                            console.warn("[TTS Warning] Backend returned mock silence placeholder. Fallback to Web Speech API client.");
                             speakBrowserSpeech(text);
                         }
                     } else {
-                        // Fallback browser speech
+                        const errorMsg = await response.text();
+                        console.error(`[TTS Error] Backend returned error status ${response.status}: ${errorMsg}`);
                         speakBrowserSpeech(text);
                     }
                 } catch (err) {
-                    console.error("TTS Server unreachable, using local Web Speech API: ", err);
+                    console.error("[TTS Error] TTS Server unreachable: ", err);
                     speakBrowserSpeech(text);
                 }
             } else {
@@ -1160,21 +1217,68 @@
 
         // Browser local Speech Synthesis (Web Speech API)
         function speakBrowserSpeech(text) {
+            console.log(`[TTS] Web Speech API request. Language: "${currentLanguage}"`);
             if ('speechSynthesis' in window) {
                 const utterance = new SpeechSynthesisUtterance(text);
-                
-                // Map current UI language to browser voice locales
+
+                // Map current UI language to browser voice locales (Remove any hardcoded 'en' language values as defaults)
                 const voicesMap = {
                     'en': 'en-IN',
                     'ta': 'ta-IN',
                     'hi': 'hi-IN'
                 };
-                
-                utterance.lang = voicesMap[currentLanguage] || 'en-IN';
+
+                const targetLocale = voicesMap[currentLanguage];
+                if (!targetLocale) {
+                    console.error(`[TTS Error] Unsupported local language value: ${currentLanguage}`);
+                    return;
+                }
+
+                utterance.lang = targetLocale;
                 utterance.rate = 0.85; // slightly slower for speech clarity
+
+                // Retrieve available voices of the browser
+                const voices = window.speechSynthesis.getVoices();
+                let selectedVoice = null;
+
+                // Find matching voice for target language
+                if (currentLanguage === 'ta') {
+                    selectedVoice = voices.find(v =>
+                        v.lang.toLowerCase() === 'ta-in' ||
+                        v.lang.toLowerCase().startsWith('ta') ||
+                        v.name.toLowerCase().includes('tamil') ||
+                        v.name.toLowerCase().includes('india')
+                    );
+                } else if (currentLanguage === 'hi') {
+                    selectedVoice = voices.find(v =>
+                        v.lang.toLowerCase() === 'hi-in' ||
+                        v.lang.toLowerCase().startsWith('hi') ||
+                        v.name.toLowerCase().includes('hindi') ||
+                        v.name.toLowerCase().includes('india')
+                    );
+                } else if (currentLanguage === 'en') {
+                    selectedVoice = voices.find(v =>
+                        v.lang.toLowerCase() === 'en-in' ||
+                        v.lang.toLowerCase().startsWith('en') ||
+                        v.name.toLowerCase().includes('english') ||
+                        v.name.toLowerCase().includes('india')
+                    );
+                }
+
+                if (selectedVoice) {
+                    utterance.voice = selectedVoice;
+                }
+
+                console.log(`[TTS] Selected language: ${currentLanguage}`);
+                console.log(`[TTS] Selected voice: ${selectedVoice ? selectedVoice.name : "System Default"} (${selectedVoice ? selectedVoice.lang : targetLocale})`);
+
+                utterance.onerror = function (event) {
+                    console.error(`[TTS Error] SpeechSynthesisUtterance error during playback:`, event.error);
+                };
+
                 window.speechSynthesis.speak(utterance);
             } else {
-                console.error("Web Speech API not supported in this browser.");
+                console.error("[TTS Error] Web Speech API not supported in this browser.");
             }
         }
 
@@ -1194,11 +1298,11 @@
             const dialogOverlay = document.getElementById('sos-overlay');
             const titleElem = document.getElementById('sos-title');
             const descElem = document.getElementById('sos-description');
-            
+
             titleElem.innerText = "Trigging SOS Help...";
             descElem.innerHTML = "Accessing GPS location and packaging alert payloads...";
             dialogOverlay.style.display = 'flex';
-            
+
             // Speak emergency trigger
             speakText("Sending emergency alert! I need help immediately!");
 
@@ -1207,9 +1311,9 @@
                     async (position) => {
                         const lat = position.coords.latitude;
                         const lng = position.coords.longitude;
-                        
+
                         descElem.innerHTML = `GPS Lock obtained: <b>${lat.toFixed(4)}, ${lng.toFixed(4)}</b>.<br>transmitting SOS to backend MongoDB registry...`;
-                        
+
                         if (userId) {
                             try {
                                 const response = await fetch(`${apiBase}/emergency/sos`, {
@@ -1222,15 +1326,15 @@
                                         message: "Emergency! I need help immediately."
                                     })
                                 });
-                                
+
                                 if (response.ok) {
                                     const res = await response.json();
                                     titleElem.innerText = "Caregiver Notified!";
-                                    let caregiverStatus = res.caregiver_notified 
+                                    let caregiverStatus = res.caregiver_notified
                                         ? "FCM notification successfully dispatched to registered caregiver device."
                                         : "SOS logged in database. Caregiver push channel unavailable (SMS fallback recommended).";
                                     descElem.innerHTML = `Emergency ID: <code>${res.log_id}</code><br>${caregiverStatus}<br>Maps Coordinate: <a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank" style="color: var(--primary);">View on Map</a>`;
-                                    
+
                                     // Refresh logs
                                     refreshData();
                                 } else {
@@ -1258,7 +1362,7 @@
         async function submitSOSFallback(lat, lng, reason) {
             const titleElem = document.getElementById('sos-title');
             const descElem = document.getElementById('sos-description');
-            
+
             if (userId) {
                 try {
                     const response = await fetch(`${apiBase}/emergency/sos`, {
@@ -1289,4 +1393,5 @@
         }
     </script>
 </body>
+
 </html>
