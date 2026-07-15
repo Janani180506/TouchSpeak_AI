@@ -48,6 +48,28 @@ class ApiService {
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
+  static Future<Map<String, dynamic>> getUser(String userId) async {
+    final res = await http.get(Uri.parse('${AppState.apiBaseUrl}/users/$userId'));
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
+  static Future<Map<String, dynamic>> updateUser({
+    required String userId,
+    required Map<String, dynamic> data,
+  }) async {
+    final res = await http.put(
+      Uri.parse('${AppState.apiBaseUrl}/users/$userId'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(data),
+    );
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
+  static Future<List<dynamic>> getEmergencyLogs(String userId) async {
+    final res = await http.get(Uri.parse('${AppState.apiBaseUrl}/emergency/logs/$userId'));
+    return jsonDecode(res.body) as List<dynamic>;
+  }
+
   static Future<Map<String, dynamic>> createUser({
     required String name,
     required String preferredLanguage,
@@ -60,3 +82,4 @@ class ApiService {
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
 }
+

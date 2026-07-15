@@ -596,6 +596,16 @@
             background-color: var(--primary-hover);
             transform: translateY(-1px);
         }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
     </style>
 </head>
 
@@ -629,14 +639,79 @@
         </div>
     </div>
 
-    <!-- SOS Triggered Dialog -->
-    <div id="sos-overlay" class="overlay" onclick="closeSOSDialog()">
-        <div class="dialog" onclick="event.stopPropagation()">
-            <span class="material-icons dialog-icon">sos</span>
-            <h3 class="dialog-title" id="sos-title">Calling for Help!</h3>
-            <p class="dialog-desc" id="sos-description">Your location data has been retrieved and is being packaged for
-                transmission to your caregiver.</p>
-            <button class="dialog-btn" onclick="closeSOSDialog()">Dismiss Alert</button>
+    <!-- SOS Confirmation Dialog -->
+    <div id="sos-confirm-overlay" class="overlay">
+        <div class="dialog">
+            <span class="material-icons dialog-icon" style="color: var(--danger);">sos</span>
+            <h3 class="dialog-title">Emergency SOS</h3>
+            <p class="dialog-desc">Are you sure you want to notify your caregiver?</p>
+            <div style="display: flex; gap: 12px; justify-content: center; width: 100%;">
+                <button class="dialog-btn" style="background-color: var(--border); color: var(--text-dark); flex: 1;"
+                    onclick="cancelSOSConfirm()">Cancel</button>
+                <button class="dialog-btn" style="background-color: var(--danger); flex: 1;"
+                    onclick="proceedToSOSCountdown()">Send SOS</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SOS Countdown Dialog -->
+    <div id="sos-countdown-overlay" class="overlay">
+        <div class="dialog">
+            <span
+                style="font-size: 20px; font-weight: bold; color: var(--danger); font-family: 'Outfit'; margin-bottom: 8px;">DISPATCHING
+                ALERT IN</span>
+            <div class="countdown-ring"
+                style="width: 120px; height: 120px; border-radius: 50%; border: 8px solid var(--light); border-top-color: var(--danger); display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto;">
+                <span id="countdown-number" style="font-size: 48px; font-weight: 700; color: var(--danger);">5</span>
+            </div>
+            <button class="dialog-btn"
+                style="background-color: var(--border); color: var(--text-dark); font-weight: 700; width: 100%;"
+                onclick="cancelSOSCountdown()">CANCEL DISPATCH</button>
+        </div>
+    </div>
+
+    <!-- SOS Loading Dialog -->
+    <div id="sos-loading-overlay" class="overlay">
+        <div class="dialog">
+            <div
+                style="width: 50px; height: 50px; border: 5px solid var(--light); border-top-color: var(--danger); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto;">
+            </div>
+            <h3 class="dialog-title" style="color: var(--danger); margin-top: 12px;">Sending Emergency SOS</h3>
+            <p class="dialog-desc">Locating and notifying caregiver...</p>
+        </div>
+    </div>
+
+    <!-- SOS Success Dialog -->
+    <div id="sos-success-overlay" class="overlay">
+        <div class="dialog" style="text-align: left; max-width: 440px;">
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+                <span class="material-icons" style="font-size: 32px; color: var(--success);">check_circle</span>
+                <h3 class="dialog-title" style="margin: 0;">Emergency Alert Sent Successfully</h3>
+            </div>
+            <div id="sos-success-content" class="dialog-desc"
+                style="display: flex; flex-direction: column; gap: 12px; color: var(--text-dark); font-size: 15px;">
+                <!-- Populated details dynamically -->
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 8px;">
+                <a id="sos-map-link" href="#" target="_blank" class="dialog-btn"
+                    style="background-color: #2A6FDB; display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; text-align: center; color: white;">
+                    <span class="material-icons">map</span> View on Google Maps
+                </a>
+                <button class="dialog-btn" style="background-color: var(--border); color: var(--text-dark);"
+                    onclick="closeSOSSuccessDialog()">Dismiss</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SOS Error Dialog -->
+    <div id="sos-error-overlay" class="overlay">
+        <div class="dialog">
+            <span class="material-icons" style="font-size: 64px; color: var(--danger);">error_outline</span>
+            <h3 class="dialog-title">Emergency Alert Failed</h3>
+            <p class="dialog-desc" id="sos-error-msg">Location coordinates are currently unavailable. Please check your
+                settings.</p>
+            <button class="dialog-btn" style="background-color: var(--border); color: var(--text-dark);"
+                onclick="closeSOSErrorDialog()">Dismiss</button>
         </div>
     </div>
 
@@ -1293,103 +1368,193 @@
             return new Blob([byteArray], { type: mimeType });
         }
 
+        // Multilingual translations for voice alerts
+        const sosTranslations = {
+            'en': 'Emergency! I need immediate assistance.',
+            'ta': 'அவசர உதவி தேவை. தயவுசெய்து எனக்கு உதவுங்கள்.',
+            'hi': 'मुझे तुरंत सहायता चाहिए। कृपया मेरी मदद करें।'
+        };
+
+        const sendingTranslations = {
+            'en': 'Sending emergency alert.',
+            'ta': 'அவசர எச்சரிக்கை அனுப்பப்படுகிறது.',
+            'hi': 'आपातकालीन चेतावनी भेजी जा रही है।'
+        };
+
+        let sosTimer = null;
+
         // SOS Button triggered
         function triggerSOS() {
-            const dialogOverlay = document.getElementById('sos-overlay');
-            const titleElem = document.getElementById('sos-title');
-            const descElem = document.getElementById('sos-description');
-
-            titleElem.innerText = "Trigging SOS Help...";
-            descElem.innerHTML = "Accessing GPS location and packaging alert payloads...";
-            dialogOverlay.style.display = 'flex';
-
-            // Speak emergency trigger
-            speakText("Sending emergency alert! I need help immediately!");
-
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    async (position) => {
-                        const lat = position.coords.latitude;
-                        const lng = position.coords.longitude;
-
-                        descElem.innerHTML = `GPS Lock obtained: <b>${lat.toFixed(4)}, ${lng.toFixed(4)}</b>.<br>transmitting SOS to backend MongoDB registry...`;
-
-                        if (userId) {
-                            try {
-                                const response = await fetch(`${apiBase}/emergency/sos`, {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({
-                                        user_id: userId,
-                                        latitude: lat,
-                                        longitude: lng,
-                                        message: "Emergency! I need help immediately."
-                                    })
-                                });
-
-                                if (response.ok) {
-                                    const res = await response.json();
-                                    titleElem.innerText = "Caregiver Notified!";
-                                    let caregiverStatus = res.caregiver_notified
-                                        ? "FCM notification successfully dispatched to registered caregiver device."
-                                        : "SOS logged in database. Caregiver push channel unavailable (SMS fallback recommended).";
-                                    descElem.innerHTML = `Emergency ID: <code>${res.log_id}</code><br>${caregiverStatus}<br>Maps Coordinate: <a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank" style="color: var(--primary);">View on Map</a>`;
-
-                                    // Refresh logs
-                                    refreshData();
-                                } else {
-                                    titleElem.innerText = "Server Error";
-                                    descElem.innerText = "SOS package rejected by server. Call emergency line directly.";
-                                }
-                            } catch (err) {
-                                titleElem.innerText = "Network Error";
-                                descElem.innerText = "Backend server unreachable. Make sure Flask app is active.";
-                            }
-                        }
-                    },
-                    (error) => {
-                        descElem.innerText = "GPS coordinates access blocked/disabled. Transmitting cell-tower fallback details...";
-                        // Transmit default fallback locations
-                        submitSOSFallback(13.0827, 80.2707, "GPS permission denied.");
-                    }
-                );
-            } else {
-                descElem.innerText = "Browser Geolocation unavailable. Transmitting generic location coordinates...";
-                submitSOSFallback(13.0827, 80.2707, "Browser Geolocation unsupported.");
+            // Cancel any active timers/states
+            if (sosTimer) {
+                clearInterval(sosTimer);
+                sosTimer = null;
             }
+
+            // Hide all overlays first
+            closeAllSOSOverlays();
+
+            // Show Confirmation
+            document.getElementById('sos-confirm-overlay').style.display = 'flex';
         }
 
-        async function submitSOSFallback(lat, lng, reason) {
-            const titleElem = document.getElementById('sos-title');
-            const descElem = document.getElementById('sos-description');
+        function cancelSOSConfirm() {
+            document.getElementById('sos-confirm-overlay').style.display = 'none';
+        }
 
-            if (userId) {
-                try {
-                    const response = await fetch(`${apiBase}/emergency/sos`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            user_id: userId,
-                            latitude: lat,
-                            longitude: lng,
-                            message: `SOS fired. Location access: ${reason}`
-                        })
-                    });
-                    if (response.ok) {
-                        const res = await response.json();
-                        titleElem.innerText = "Alert Registered (Fallback)";
-                        descElem.innerHTML = `Triggered SOS using default/center coordinates. Caregiver notified status: ${res.caregiver_notified}. Log ID: <code>${res.log_id}</code>`;
-                        refreshData();
-                    }
-                } catch (e) {
-                    titleElem.innerText = "Emergency Log Failed";
-                    descElem.innerText = "Server connection timed out.";
+        function proceedToSOSCountdown() {
+            // Hide confirmation
+            document.getElementById('sos-confirm-overlay').style.display = 'none';
+
+            // Show Countdown
+            document.getElementById('sos-countdown-overlay').style.display = 'flex';
+
+            let countdownSeconds = 5;
+            document.getElementById('countdown-number').innerText = countdownSeconds;
+
+            sosTimer = setInterval(() => {
+                countdownSeconds--;
+                if (countdownSeconds <= 0) {
+                    clearInterval(sosTimer);
+                    sosTimer = null;
+                    document.getElementById('sos-countdown-overlay').style.display = 'none';
+                    dispatchSOS();
+                } else {
+                    document.getElementById('countdown-number').innerText = countdownSeconds;
                 }
-            }
+            }, 1000);
         }
 
-        function closeSOSDialog() {
-            document.getElementById('sos-overlay').style.display = 'none';
+        function cancelSOSCountdown() {
+            if (sosTimer) {
+                clearInterval(sosTimer);
+                sosTimer = null;
+            }
+            document.getElementById('sos-countdown-overlay').style.display = 'none';
+        }
+
+        async function dispatchSOS() {
+            // Show loading overlay
+            document.getElementById('sos-loading-overlay').style.display = 'flex';
+
+            // Speak "Sending emergency alert." in the correct language
+            const preVoiceText = sendingTranslations[currentLanguage] || sendingTranslations['en'];
+            speakText(preVoiceText);
+
+            if (!navigator.geolocation) {
+                showSOSError("Location coordinates are currently unavailable. Please check your settings.");
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                async (position) => {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+
+                    if (!userId) {
+                        showSOSError("No user ID is configured. Please register or seed a user profile first.");
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch(`${apiBase}/emergency/sos`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                user_id: userId,
+                                latitude: lat,
+                                longitude: lng,
+                                message: "Emergency! I need help immediately."
+                            })
+                        });
+
+                        if (response.ok) {
+                            const res = await response.json();
+
+                            // Speak translated emergency voice
+                            const voiceText = sosTranslations[currentLanguage] || sosTranslations['en'];
+                            await speakText(voiceText);
+
+                            // Hide loading
+                            document.getElementById('sos-loading-overlay').style.display = 'none';
+
+                            // Show success modal
+                            showSOSSuccess(res, lat, lng);
+                        } else {
+                            showSOSError("SOS package rejected by server. Call emergency line directly.");
+                        }
+                    } catch (err) {
+                        showSOSError("Could not send alert. Please check connection and try again.");
+                    }
+                },
+                (error) => {
+                    let friendlyMsg = "Location coordinates are currently unavailable. Please check your settings.";
+                    if (error.code === error.PERMISSION_DENIED) {
+                        friendlyMsg = "Location permission was denied. Please allow location access in settings.";
+                    } else if (error.code === error.POSITION_UNAVAILABLE) {
+                        friendlyMsg = "GPS is currently disabled. Please enable GPS in your device settings.";
+                    } else if (error.code === error.TIMEOUT) {
+                        friendlyMsg = "Location retrieval timed out. Please check your settings.";
+                    }
+                    showSOSError(friendlyMsg);
+                },
+                { enableHighAccuracy: true, timeout: 8000 }
+            );
+        }
+
+        function showSOSError(msg) {
+            closeAllSOSOverlays();
+            document.getElementById('sos-error-overlay').style.display = 'flex';
+            document.getElementById('sos-error-msg').innerText = msg;
+        }
+
+        function showSOSSuccess(data, lat, lng) {
+            closeAllSOSOverlays();
+
+            const emergencyId = data.log_id || 'N/A';
+            const timestamp = data.timestamp || 'N/A';
+            const caregiverName = data.caregiver_name || 'N/A';
+            const notificationStatus = data.notification_status || 'Failed';
+            const emailStatus = data.email_status || 'Not Sent';
+            const mapsUrl = data.google_maps_url || `https://www.google.com/maps?q=${lat},${lng}`;
+
+            const contentElem = document.getElementById('sos-success-content');
+            contentElem.innerHTML = `
+                <div><b>Emergency ID:</b><br><span style="word-break: break-all; opacity: 0.85;">${emergencyId}</span></div>
+                <div><b>Date & Time:</b><br><span style="opacity: 0.85;">${timestamp}</span></div>
+                <div><b>Caregiver:</b><br><span style="opacity: 0.85;">${caregiverName}</span></div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <b>Notification FCM:</b>
+                    <span style="color: ${notificationStatus === 'Success' ? 'var(--success)' : '#e0a800'}; font-weight: 700;">${notificationStatus}</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <b>Email Backup:</b>
+                    <span style="color: ${emailStatus === 'Success' ? 'var(--success)' : 'var(--danger)'}; font-weight: 700;">${emailStatus}</span>
+                </div>
+            `;
+
+            const mapLink = document.getElementById('sos-map-link');
+            mapLink.href = mapsUrl;
+
+            document.getElementById('sos-success-overlay').style.display = 'flex';
+
+            refreshData();
+        }
+
+        function closeSOSSuccessDialog() {
+            document.getElementById('sos-success-overlay').style.display = 'none';
+        }
+
+        function closeSOSErrorDialog() {
+            document.getElementById('sos-error-overlay').style.display = 'none';
+        }
+
+        function closeAllSOSOverlays() {
+            document.getElementById('sos-confirm-overlay').style.display = 'none';
+            document.getElementById('sos-countdown-overlay').style.display = 'none';
+            document.getElementById('sos-loading-overlay').style.display = 'none';
+            document.getElementById('sos-success-overlay').style.display = 'none';
+            document.getElementById('sos-error-overlay').style.display = 'none';
         }
     </script>
 </body>

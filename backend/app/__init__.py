@@ -22,6 +22,11 @@ def create_app():
     app.config["GOOGLE_TTS_API_KEY"] = os.getenv("GOOGLE_TTS_API_KEY", "")
     app.config["GOOGLE_MAPS_API_KEY"] = os.getenv("GOOGLE_MAPS_API_KEY", "")
     app.config["FCM_SERVER_KEY"] = os.getenv("FCM_SERVER_KEY", "")
+    app.config["SMTP_SERVER"] = os.getenv("SMTP_SERVER", "")
+    app.config["SMTP_PORT"] = os.getenv("SMTP_PORT", "587")
+    app.config["SMTP_USERNAME"] = os.getenv("SMTP_USERNAME", "")
+    app.config["SMTP_PASSWORD"] = os.getenv("SMTP_PASSWORD", "")
+    app.config["SENDER_EMAIL"] = os.getenv("SENDER_EMAIL", "sos@touchspeak.ai")
 
     global mongo_client, db
     mongo_client = MongoClient(app.config["MONGO_URI"])

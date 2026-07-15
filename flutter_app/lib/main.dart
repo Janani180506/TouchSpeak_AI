@@ -7,8 +7,16 @@ import 'screens/frequent_phrases_screen.dart';
 import 'screens/emergency_screen.dart';
 import 'screens/profile_screen.dart';
 
-void main() {
-  runApp(const TouchSpeakApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final appState = AppState();
+  await appState.init();
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => appState,
+      child: const TouchSpeakApp(),
+    ),
+  );
 }
 
 class TouchSpeakApp extends StatelessWidget {
@@ -16,22 +24,23 @@ class TouchSpeakApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => AppState(),
-      child: MaterialApp(
-        title: 'TouchSpeak AI',
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          useMaterial3: true,
-          colorSchemeSeed: const Color(0xFF2A6FDB),
-          fontFamily: 'Roboto',
-          textTheme: const TextTheme(
-            bodyLarge: TextStyle(fontSize: 20),
-            bodyMedium: TextStyle(fontSize: 18),
+    return Consumer<AppState>(
+      builder: (context, appState, _) {
+        return MaterialApp(
+          title: 'TouchSpeak AI',
+          debugShowCheckedModeBanner: false,
+          theme: ThemeData(
+            useMaterial3: true,
+            colorSchemeSeed: const Color(0xFF2A6FDB),
+            fontFamily: 'Roboto',
+            textTheme: const TextTheme(
+              bodyLarge: TextStyle(fontSize: 20),
+              bodyMedium: TextStyle(fontSize: 18),
+            ),
           ),
-        ),
-        home: const HomeShell(),
-      ),
+          home: const HomeShell(),
+        );
+      },
     );
   }
 }

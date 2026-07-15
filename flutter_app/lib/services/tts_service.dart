@@ -142,6 +142,11 @@ class TtsService {
       'ta': 'அவசர எச்சரிக்கை அனுப்பப்படுகிறது.',
       'hi': 'आपातकालीन चेतावनी भेजी जा रही है।',
     },
+    'emergency! i need immediate assistance.': {
+      'en': 'Emergency! I need immediate assistance.',
+      'ta': 'அவசர உதவி தேவை. தயவுசெய்து எனக்கு உதவுங்கள்.',
+      'hi': 'मुझे तुरंत सहायता चाहिए। कृपया मेरी मदद करें।',
+    },
   };
 
   static Future<bool> speak(String text, String language) async {
