@@ -54,4 +54,8 @@ def create_app():
     def index():
         return app.send_static_file("index.html")
 
+    @app.route("/board_controller.js")
+    def serve_board_controller():
+        return app.send_static_file("board_controller.js")
+
     return app

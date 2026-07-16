@@ -76,7 +76,37 @@ ICON_CATEGORIES = {
 
 
 def get_phrase(icon_id: str, lang: str = "en") -> str:
+    # First check if db is available in current_app to query dynamic cards
+    try:
+        from flask import current_app
+        from bson import ObjectId
+        if current_app and hasattr(current_app, "db") and current_app.db is not None:
+            query = {}
+            if ObjectId.is_valid(icon_id):
+                query["_id"] = ObjectId(icon_id)
+            else:
+                query["title"] = icon_id
+
+            card = current_app.db.communication_cards.find_one(query)
+            if card:
+                translations = card.get("translations", {})
+                if translations and lang in translations:
+                    return translations[lang]
+
+                # Fallback fields directly on the card
+                en_val = card.get("en_translation") or card.get("phrase") or card.get("title")
+                if lang == "en":
+                    return en_val or ""
+                elif lang == "ta":
+                    return card.get("ta_translation") or en_val or ""
+                elif lang == "hi":
+                    return card.get("hi_translation") or en_val or ""
+                return en_val or ""
+    except Exception:
+        pass
+
     entry = PHRASE_LIBRARY.get(icon_id)
     if not entry:
         return ""
     return entry.get(lang, entry.get("en", ""))
+
