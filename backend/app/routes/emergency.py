@@ -15,9 +15,11 @@ def trigger_sos():
     """
     Body: { user_id, latitude, longitude, message? }
     1. Stores an emergency log with all required fields.
-    2. Looks up the user's caregiver contact + FCM token.
-    3. Sends a push notification.
-    4. If FCM fails, sends SMTP backup email.
+    2. Looks up all user's registered caregivers.
+    3. For every caregiver who has notifications enabled:
+       - Sends a push notification using Firebase Admin SDK.
+       - If FCM fails, sends SMTP backup email.
+    4. Continues to next caregiver even on failures.
     5. Returns details in JSON response for Flutter UI display.
     """
     data = request.get_json(force=True)
@@ -37,73 +39,114 @@ def trigger_sos():
     if not user:
         return jsonify({"error": "User not found"}), 404
 
-    caregiver = user.get("caregiver", {})
-    caregiver_name = caregiver.get("name", "Unknown Caregiver")
+    # Fetch multiple caregivers from 'caregivers' array
+    caregivers = user.get("caregivers", [])
+    
+    # Fallback to single legacy caregiver structure if list is empty
+    legacy_caregiver = user.get("caregiver", {})
+    if not caregivers and legacy_caregiver and legacy_caregiver.get("name"):
+        caregivers = [{
+            "_id": "legacy",
+            "name": legacy_caregiver.get("name"),
+            "relationship": "Caregiver",
+            "phone": legacy_caregiver.get("phone", ""),
+            "email": legacy_caregiver.get("email", ""),
+            "profile_photo": "",
+            "fcm_token": legacy_caregiver.get("fcm_token", ""),
+            "notifications_enabled": True
+        }]
+
     maps_url = f"https://www.google.com/maps?q={lat},{lng}"
     now = datetime.now(timezone.utc)
+    user_name = user.get("name", "A TouchSpeak user")
 
-    # Insert initial log document in MongoDB
+    # Insert initial emergency log document in MongoDB
     log_doc = {
         "user_id": ObjectId(user_id),
         "latitude": float(lat),
         "longitude": float(lng),
         "google_maps_url": maps_url,
         "timestamp": now,
-        "caregiver_name": caregiver_name,
-        "notification_status": "Pending",
-        "email_status": "Pending",
         "message": message,
+        "alert_status": "Sent",
+        "caregiver_notifications": []
     }
+    
     result = current_app.db.emergency_logs.insert_one(log_doc)
     log_id = str(result.inserted_id)
 
-    # 1. Try Firebase Cloud Messaging (FCM)
-    fcm_success = send_caregiver_alert(
-        current_app,
-        caregiver=caregiver,
-        user_name=user.get("name", "A TouchSpeak user"),
-        message=message,
-        lat=lat,
-        lng=lng,
-        emergency_id=log_id,
-        timestamp=now,
-    )
-    notification_status = "Success" if fcm_success else "Failed"
+    # Process notification delivery for each caregiver
+    caregiver_statuses = []
+    
+    for cg in caregivers:
+        cg_id = cg.get("_id", "unknown")
+        cg_name = cg.get("name", "Unknown Caregiver")
+        cg_email = cg.get("email")
+        cg_fcm = cg.get("fcm_token")
+        notifications_enabled = cg.get("notifications_enabled", True)
 
-    # 2. Try Email Backup if FCM fails
-    email_status = "Not Sent"
-    if not fcm_success:
-        caregiver_email = caregiver.get("email")
-        email_success = send_backup_email(
-            current_app,
-            caregiver_email=caregiver_email,
-            user_name=user.get("name", "A TouchSpeak user"),
-            emergency_id=log_id,
-            timestamp_str=now.strftime("%Y-%m-%d %H:%M:%S UTC"),
-            maps_link=maps_url,
-            message=message,
-        )
-        email_status = "Success" if email_success else "Failed"
+        fcm_success = False
+        email_success = False
 
-    # Update MongoDB with final status
+        if notifications_enabled:
+            # 1. Try Firebase Cloud Messaging (FCM)
+            if cg_fcm:
+                fcm_success = send_caregiver_alert(
+                    current_app,
+                    caregiver=cg,
+                    user_name=user_name,
+                    message=message,
+                    lat=lat,
+                    lng=lng,
+                    emergency_id=log_id,
+                    timestamp=now,
+                )
+            
+            # 2. Try Email Backup if FCM fails
+            if not fcm_success and cg_email:
+                email_success = send_backup_email(
+                    current_app,
+                    caregiver_email=cg_email,
+                    user_name=user_name,
+                    emergency_id=log_id,
+                    timestamp_str=now.strftime("%Y-%m-%d %H:%M:%S UTC"),
+                    maps_link=maps_url,
+                    message=message,
+                )
+
+        cg_status = {
+            "caregiver_id": cg_id,
+            "name": cg_name,
+            "notification_status": "Success" if fcm_success else ("Failed" if cg_fcm else "Skipped"),
+            "email_status": "Success" if email_success else ("Failed" if (cg_email and not fcm_success) else "Skipped"),
+            "status": "Sent"
+        }
+        caregiver_statuses.append(cg_status)
+
+    # Update MongoDB with final caregiver notifications status list
     current_app.db.emergency_logs.update_one(
         {"_id": result.inserted_id},
         {
             "$set": {
-                "notification_status": notification_status,
-                "email_status": email_status,
+                "caregiver_notifications": caregiver_statuses,
             }
         },
     )
+
+    # Root-level backward compatibility values
+    primary_fcm = "Success" if any(s["notification_status"] == "Success" for s in caregiver_statuses) else "Failed"
+    primary_email = "Success" if any(s["email_status"] == "Success" for s in caregiver_statuses) else "Skipped"
+    primary_name = caregivers[0]["name"] if caregivers else "Unknown Caregiver"
 
     return jsonify({
         "message": "SOS triggered successfully",
         "log_id": log_id,
         "timestamp": now.strftime("%Y-%m-%d %H:%M:%S UTC"),
-        "caregiver_name": caregiver_name,
-        "notification_status": notification_status,
-        "email_status": email_status,
+        "caregiver_name": primary_name,
+        "notification_status": primary_fcm,
+        "email_status": primary_email,
         "google_maps_url": maps_url,
+        "caregiver_statuses": caregiver_statuses
     }), 200
 
 
@@ -126,3 +169,91 @@ def get_logs(user_id):
             d["timestamp"] = d["timestamp"].strftime("%Y-%m-%d %H:%M:%S UTC")
     return jsonify(docs), 200
 
+
+@emergency_bp.route("/alerts/<user_id>", methods=["GET"])
+def get_alerts(user_id):
+    """
+    Fetches detailed emergency alerts for caregivers dashboard
+    """
+    try:
+        user = current_app.db.users.find_one({"_id": ObjectId(user_id)})
+        user_name = user.get("name", "Unknown User") if user else "Unknown User"
+        docs = list(
+            current_app.db.emergency_logs
+            .find({"user_id": ObjectId(user_id)})
+            .sort("timestamp", -1)
+        )
+    except Exception as e:
+        return jsonify({"error": f"Invalid User ID or MongoDB error: {e}"}), 400
+
+    for d in docs:
+        d["_id"] = str(d["_id"])
+        d["user_id"] = str(d["user_id"])
+        d["user_name"] = user_name
+        if isinstance(d.get("timestamp"), datetime):
+            d["timestamp"] = d["timestamp"].strftime("%Y-%m-%d %H:%M:%S UTC")
+    return jsonify(docs), 200
+
+
+@emergency_bp.route("/alerts/<alert_id>/status", methods=["PUT"])
+def update_alert_status(alert_id):
+    """
+    Updates the Alert Status (Sent, Delivered, Viewed, Acknowledged, Resolved)
+    """
+    data = request.get_json(force=True)
+    status = data.get("status")
+    caregiver_id = data.get("caregiver_id")
+
+    if not status:
+        return jsonify({"error": "status is required"}), 400
+
+    allowed_statuses = ["Sent", "Delivered", "Viewed", "Acknowledged", "Resolved"]
+    if status not in allowed_statuses:
+        return jsonify({"error": f"status must be one of {allowed_statuses}"}), 400
+
+    try:
+        alert = current_app.db.emergency_logs.find_one({"_id": ObjectId(alert_id)})
+    except Exception as e:
+        return jsonify({"error": f"Invalid Alert ID: {e}"}), 400
+
+    if not alert:
+        return jsonify({"error": "Alert log not found"}), 404
+
+    update_query = {"$set": {"alert_status": status}}
+
+    if caregiver_id:
+        notifications = alert.get("caregiver_notifications", [])
+        updated_notifications = []
+        for cn in notifications:
+            if cn.get("caregiver_id") == caregiver_id:
+                cn["status"] = status
+            updated_notifications.append(cn)
+        update_query["$set"]["caregiver_notifications"] = updated_notifications
+    else:
+        notifications = alert.get("caregiver_notifications", [])
+        for cn in notifications:
+            cn["status"] = status
+        update_query["$set"]["caregiver_notifications"] = notifications
+
+    current_app.db.emergency_logs.update_one(
+        {"_id": ObjectId(alert_id)},
+        update_query
+    )
+
+    return jsonify({"message": "Alert status updated successfully"}), 200
+
+
+@emergency_bp.route("/web-config", methods=["GET"])
+def get_web_config():
+    import os
+    from dotenv import load_dotenv
+    load_dotenv(override=True)
+    return jsonify({
+        "apiKey": os.getenv("FIREBASE_API_KEY", ""),
+        "authDomain": os.getenv("FIREBASE_AUTH_DOMAIN", ""),
+        "projectId": os.getenv("FIREBASE_PROJECT_ID", "touchspeakai"),
+        "storageBucket": os.getenv("FIREBASE_STORAGE_BUCKET", ""),
+        "messagingSenderId": os.getenv("FIREBASE_MESSAGING_SENDER_ID", "115581064322107031468"),
+        "appId": os.getenv("FIREBASE_APP_ID", ""),
+        "measurementId": os.getenv("FIREBASE_MEASUREMENT_ID", "")
+    }), 200

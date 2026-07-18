@@ -58,4 +58,40 @@ def create_app():
     def serve_board_controller():
         return app.send_static_file("board_controller.js")
 
+    @app.route("/firebase-messaging-sw.js")
+    def serve_sw():
+        import os
+        from dotenv import load_dotenv
+        load_dotenv(override=True)
+        config_js = f"""
+importScripts('https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging-compat.js');
+
+const firebaseConfig = {{
+    apiKey: "{os.getenv("FIREBASE_API_KEY", "")}",
+    authDomain: "{os.getenv("FIREBASE_AUTH_DOMAIN", "")}",
+    projectId: "{os.getenv("FIREBASE_PROJECT_ID", "touchspeakai")}",
+    storageBucket: "{os.getenv("FIREBASE_STORAGE_BUCKET", "")}",
+    messagingSenderId: "{os.getenv("FIREBASE_MESSAGING_SENDER_ID", "116629924465")}",
+    appId: "{os.getenv("FIREBASE_APP_ID", "")}",
+    measurementId: "{os.getenv("FIREBASE_MEASUREMENT_ID", "")}"
+}};
+
+firebase.initializeApp(firebaseConfig);
+const messaging = firebase.messaging();
+
+messaging.onBackgroundMessage((payload) => {{
+    console.log('[firebase-messaging-sw.js] Received background message ', payload);
+    const notificationTitle = payload.notification.title;
+    const notificationOptions = {{
+        body: payload.notification.body,
+        data: payload.data,
+        icon: '/favicon.ico'
+    }};
+
+    self.registration.showNotification(notificationTitle, notificationOptions);
+}});
+"""
+        return app.response_class(config_js, mimetype='application/javascript')
+
     return app

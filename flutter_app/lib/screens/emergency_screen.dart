@@ -159,7 +159,8 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
     final String caregiverName = data['caregiver_name'] ?? 'N/A';
     final String mapsUrl = data['google_maps_url'] ?? '';
     final String notificationStatus = data['notification_status'] ?? 'Failed';
-    final String emailStatus = data['email_status'] ?? 'Not Sent';
+    final String emailStatus = data['email_status'] ?? 'Skipped';
+    final List<dynamic> caregiverStatuses = data['caregiver_statuses'] ?? [];
 
     showDialog(
       context: context,
@@ -181,33 +182,80 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
               const SizedBox(height: 12),
               Text('Date & Time:\n$timestamp'),
               const SizedBox(height: 12),
-              Text('Caregiver:\n$caregiverName'),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  const Text('Notification FCM: '),
-                  Text(
-                    notificationStatus,
-                    style: TextStyle(
-                      color: notificationStatus == 'Success' ? Colors.green : Colors.orange,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
+              const Text('Caregivers Alert Delivery Statuses:', style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 6),
-              Row(
-                children: [
-                  const Text('Email Backup: '),
-                  Text(
-                    emailStatus,
-                    style: TextStyle(
-                      color: emailStatus == 'Success' ? Colors.green : Colors.red,
-                      fontWeight: FontWeight.bold,
+              if (caregiverStatuses.isEmpty) ...[
+                Text('Caregiver: $caregiverName'),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    const Text('Notification FCM: '),
+                    Text(
+                      notificationStatus,
+                      style: TextStyle(
+                        color: notificationStatus == 'Success' ? Colors.green : Colors.orange,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    const Text('Email Backup: '),
+                    Text(
+                      emailStatus,
+                      style: TextStyle(
+                        color: emailStatus == 'Success' ? Colors.green : Colors.red,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ] else
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: caregiverStatuses.map<Widget>((cg) {
+                    final String name = cg['name'] ?? 'Unknown';
+                    final String fcm = cg['notification_status'] ?? 'N/A';
+                    final String email = cg['email_status'] ?? 'Skipped';
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                          Padding(
+                            padding: const EdgeInsets.left(12.0),
+                            child: Row(
+                              children: [
+                                Text('FCM: ', style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
+                                Text(
+                                  fcm,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: fcm == 'Success' ? Colors.green : Colors.orange,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Text('Email: ', style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
+                                Text(
+                                  email,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: email == 'Success' ? Colors.green : (email == 'Failed' ? Colors.red : Colors.grey),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ),
             ],
           ),
         ),

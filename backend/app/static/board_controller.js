@@ -14,6 +14,7 @@ let activeDashboardTab = 'categories';
 
 window.addEventListener('DOMContentLoaded', () => {
     initApp();
+    initFirebaseWebPush();
 });
 
 async function initApp() {
@@ -865,25 +866,45 @@ function showSOSSuccess(data, lat, lng) {
     closeAllSOSOverlays();
     const emergencyId = data.log_id || 'N/A';
     const timestamp = data.timestamp || 'N/A';
-    const caregiverName = data.caregiver_name || 'N/A';
-    const notificationStatus = data.notification_status || 'Failed';
-    const emailStatus = data.email_status || 'Not Sent';
     const mapsUrl = data.google_maps_url || `https://www.google.com/maps?q=${lat},${lng}`;
 
     const contentElem = document.getElementById('sos-success-content');
+
+    // Construct statuses report card for all caregivers
+    const caregiverStatuses = data.caregiver_statuses || [];
+    let listHtml = '';
+
+    if (caregiverStatuses.length > 0) {
+        caregiverStatuses.forEach(cg => {
+            listHtml += `
+                <div style="border: 1px solid var(--border); padding: 8px; border-radius: var(--radius-sm); margin-top: 4px; display: flex; flex-direction: column; gap: 4px; background: #fafafa;">
+                    <div><b>Caregiver:</b> <span style="opacity: 0.85;">${cg.name}</span></div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <b>FCM Notification:</b>
+                        <span style="color: ${cg.notification_status === 'Success' ? 'var(--success)' : '#e0a800'}; font-weight: 700;">${cg.notification_status}</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <b>Email Backup:</b>
+                        <span style="color: ${cg.email_status === 'Success' ? 'var(--success)' : 'var(--danger)'}; font-weight: 700;">${cg.email_status}</span>
+                    </div>
+                </div>
+            `;
+        });
+    } else {
+        listHtml = `<div style="color: var(--text-muted);">No caregivers are currently registered to receive alerts. Go to Caregiver Dashboard -> Caregivers to add one.</div>`;
+    }
+
     contentElem.innerHTML = `
         <div><b>Emergency ID:</b><br><span style="word-break: break-all; opacity: 0.85;">${emergencyId}</span></div>
         <div><b>Date & Time:</b><br><span style="opacity: 0.85;">${timestamp}</span></div>
-        <div><b>Caregiver:</b><br><span style="opacity: 0.85;">${caregiverName}</span></div>
-        <div style="display: flex; align-items: center; gap: 8px;">
-            <b>Notification FCM:</b>
-            <span style="color: ${notificationStatus === 'Success' ? 'var(--success)' : '#e0a800'}; font-weight: 700;">${notificationStatus}</span>
-        </div>
-        <div style="display: flex; align-items: center; gap: 8px;">
-            <b>Email Backup:</b>
-            <span style="color: ${emailStatus === 'Success' ? 'var(--success)' : 'var(--danger)'}; font-weight: 700;">${emailStatus}</span>
+        <div style="margin-top: 8px;">
+            <b style="font-size: 14px;">Caregivers Notified:</b>
+            <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 4px;">
+                ${listHtml}
+            </div>
         </div>
     `;
+
     document.getElementById('sos-map-link').href = mapsUrl;
     document.getElementById('sos-success-overlay').style.display = 'flex';
     refreshData();
@@ -903,4 +924,431 @@ function closeAllSOSOverlays() {
     document.getElementById('sos-loading-overlay').style.display = 'none';
     document.getElementById('sos-success-overlay').style.display = 'none';
     document.getElementById('sos-error-overlay').style.display = 'none';
+}
+
+// ----------------------------------------------------
+// CAREGIVER DASHBOARD EXTENSIONS (CAREGIVERS & ALERTS)
+// ----------------------------------------------------
+let allCaregivers = [];
+
+function switchDashboardTab(tabId) {
+    activeDashboardTab = tabId;
+
+    // Toggle active class on all tabs
+    document.getElementById('dashboard-categories-tab').classList.toggle('active', tabId === 'categories');
+    document.getElementById('dashboard-cards-tab').classList.toggle('active', tabId === 'cards');
+    document.getElementById('dashboard-caregivers-tab').classList.toggle('active', tabId === 'caregivers');
+    document.getElementById('dashboard-alerts-tab').classList.toggle('active', tabId === 'alerts');
+
+    // Toggle display blocks
+    document.getElementById('dashboard-categories').style.display = tabId === 'categories' ? 'block' : 'none';
+    document.getElementById('dashboard-cards').style.display = tabId === 'cards' ? 'block' : 'none';
+    document.getElementById('dashboard-caregivers').style.display = tabId === 'caregivers' ? 'block' : 'none';
+    document.getElementById('dashboard-alerts').style.display = tabId === 'alerts' ? 'block' : 'none';
+
+    if (tabId === 'categories') {
+        renderDashboardCategories();
+    } else if (tabId === 'cards') {
+        populateCategoryDropdowns();
+        renderDashboardCards();
+    } else if (tabId === 'caregivers') {
+        loadDashboardCaregivers();
+    } else if (tabId === 'alerts') {
+        loadDashboardAlerts();
+    }
+}
+
+async function loadDashboardCaregivers() {
+    if (!userId) return;
+    try {
+        const response = await fetch(`${apiBase}/users/${userId}/caregivers`);
+        if (response.ok) {
+            allCaregivers = await response.json();
+            renderDashboardCaregivers();
+        }
+    } catch (err) {
+        console.error("Error loading caregivers list: ", err);
+    }
+}
+
+function renderDashboardCaregivers() {
+    const tbody = document.getElementById('caregivers-table-body');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    if (allCaregivers.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 20px;">No caregivers registered. Click "+ Add New Caregiver" above.</td></tr>`;
+        return;
+    }
+
+    allCaregivers.forEach(cg => {
+        const tr = document.createElement('tr');
+        tr.style.borderBottom = '1px solid var(--border)';
+
+        const tokenStatus = cg.fcm_token ?
+            `<span style="color:var(--success); font-weight:600;">Active</span>` :
+            `<span style="color:var(--warning)">None</span>`;
+
+        const notifBadge = cg.notifications_enabled !== false ?
+            ` [<span style="color:var(--success)">ON</span>]` :
+            ` [<span style="color:var(--danger)">OFF</span>]`;
+
+        tr.innerHTML = `
+            <td style="padding: 10px; font-weight: 600;">${cg.name}</td>
+            <td style="padding: 10px;">${cg.relationship || 'Caregiver'}</td>
+            <td style="padding: 10px;">
+                <div>📞 ${cg.phone || 'N/A'}</div>
+                <div style="font-size:12px; opacity:0.8;">✉️ ${cg.email || 'N/A'}</div>
+            </td>
+            <td style="padding: 10px;">
+                ${tokenStatus}${notifBadge}
+                <div style="font-size:10px; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; opacity:0.6;" title="${cg.fcm_token || ''}">
+                    ${cg.fcm_token || ''}
+                </div>
+            </td>
+            <td style="padding: 10px; text-align: right; white-space: nowrap;">
+                <button class="dialog-btn" style="padding: 4px 8px; background-color: var(--primary); margin-right: 4px; font-size:12px;" onclick="editCaregiverForm('${cg._id}')">Edit</button>
+                <button class="dialog-btn" style="padding: 4px 8px; background-color: var(--danger); font-size:12px;" onclick="deleteCaregiver('${cg._id}')">Delete</button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function showAddCaregiverForm() {
+    document.getElementById('caregiver-form-title').innerText = "Add New Caregiver";
+    document.getElementById('cg-id-input').value = "";
+    document.getElementById('cg-name-input').value = "";
+    document.getElementById('cg-rel-input').value = "";
+    document.getElementById('cg-phone-input').value = "";
+    document.getElementById('cg-email-input').value = "";
+    document.getElementById('cg-fcm-input').value = "";
+    document.getElementById('cg-notify-input').checked = true;
+    document.getElementById('caregiver-form-container').style.display = 'block';
+}
+
+function editCaregiverForm(cgId) {
+    const cg = allCaregivers.find(c => c._id === cgId);
+    if (!cg) return;
+    document.getElementById('caregiver-form-title').innerText = "Edit Caregiver";
+    document.getElementById('cg-id-input').value = cg._id;
+    document.getElementById('cg-name-input').value = cg.name || "";
+    document.getElementById('cg-rel-input').value = cg.relationship || "";
+    document.getElementById('cg-phone-input').value = cg.phone || "";
+    document.getElementById('cg-email-input').value = cg.email || "";
+    document.getElementById('cg-fcm-input').value = cg.fcm_token || "";
+    document.getElementById('cg-notify-input').checked = cg.notifications_enabled !== false;
+    document.getElementById('caregiver-form-container').style.display = 'block';
+}
+
+function hideCaregiverForm() {
+    document.getElementById('caregiver-form-container').style.display = 'none';
+}
+
+async function saveCaregiver() {
+    const cgId = document.getElementById('cg-id-input').value;
+    const name = document.getElementById('cg-name-input').value.trim();
+    const relationship = document.getElementById('cg-rel-input').value.trim();
+    const phone = document.getElementById('cg-phone-input').value.trim();
+    const email = document.getElementById('cg-email-input').value.trim();
+    const fcmToken = document.getElementById('cg-fcm-input').value.trim();
+    const notificationsEnabled = document.getElementById('cg-notify-input').checked;
+
+    if (!name || !relationship || !phone || !email) {
+        alert("Please fill in all required fields (Name, Relationship, Phone, Email).");
+        return;
+    }
+
+    const payload = {
+        name,
+        relationship,
+        phone,
+        email,
+        fcm_token: fcmToken,
+        notifications_enabled: notificationsEnabled
+    };
+
+    try {
+        let response;
+        if (cgId) {
+            response = await fetch(`${apiBase}/users/${userId}/caregivers/${cgId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+        } else {
+            response = await fetch(`${apiBase}/users/${userId}/caregivers`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+        }
+
+        if (response.ok) {
+            hideCaregiverForm();
+            loadDashboardCaregivers();
+        } else {
+            const errData = await response.json();
+            alert("Error saving caregiver: " + (errData.error || "unknown error"));
+        }
+    } catch (err) {
+        console.error("Error saving caregiver config:", err);
+    }
+}
+
+async function deleteCaregiver(cgId) {
+    if (!confirm("Are you sure you want to delete this caregiver?")) return;
+    try {
+        const response = await fetch(`${apiBase}/users/${userId}/caregivers/${cgId}`, {
+            method: 'DELETE'
+        });
+        if (response.ok) {
+            loadDashboardCaregivers();
+        } else {
+            alert("Failed to delete caregiver.");
+        }
+    } catch (err) {
+        console.error("Error deleting caregiver: ", err);
+    }
+}
+
+async function loadDashboardAlerts() {
+    if (!userId) return;
+    try {
+        const response = await fetch(`${apiBase}/emergency/alerts/${userId}`);
+        if (response.ok) {
+            const alertsList = await response.json();
+            renderDashboardAlerts(alertsList);
+        }
+    } catch (err) {
+        console.error("Error loading emergency alerts:", err);
+    }
+}
+
+function renderDashboardAlerts(alertsList) {
+    const container = document.getElementById('alerts-container');
+    if (!container) return;
+    container.innerHTML = '';
+
+    if (alertsList.length === 0) {
+        container.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 24px;">No safety alerts logged yet.</div>`;
+        return;
+    }
+
+    alertsList.forEach(alertItem => {
+        const div = document.createElement('div');
+        div.style.border = "1px solid var(--border)";
+        div.style.borderRadius = "var(--radius-md)";
+        div.style.padding = "14px";
+        div.style.backgroundColor = "var(--white)";
+        div.style.boxShadow = "var(--shadow-sm)";
+
+        let notificationsHtml = '';
+        const cgNotifications = alertItem.caregiver_notifications || [];
+
+        cgNotifications.forEach(notif => {
+            const currentStatus = notif.status || alertItem.alert_status || 'Sent';
+            notificationsHtml += `
+                <div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                    <div>
+                        <b>${notif.name}</b> (${notif.relationship || 'Caregiver'}) 
+                        <div style="font-size:11px; opacity:0.8;">FCM: ${notif.notification_status || 'N/A'} | Email: ${notif.email_status || 'N/A'}</div>
+                    </div>
+                    <div>
+                        <select onchange="updateAlertStatusWeb('${alertItem._id}', '${notif.caregiver_id}', this.value)" style="padding: 4px; font-size:12px; border-radius:4px; border:1px solid var(--border); cursor:pointer;">
+                            <option value="Sent" ${currentStatus === 'Sent' ? 'selected' : ''}>Sent</option>
+                            <option value="Delivered" ${currentStatus === 'Delivered' ? 'selected' : ''}>Delivered</option>
+                            <option value="Viewed" ${currentStatus === 'Viewed' ? 'selected' : ''}>Viewed</option>
+                            <option value="Acknowledged" ${currentStatus === 'Acknowledged' ? 'selected' : ''}>Acknowledged</option>
+                            <option value="Resolved" ${currentStatus === 'Resolved' ? 'selected' : ''}>Resolved</option>
+                        </select>
+                    </div>
+                </div>
+            `;
+        });
+
+        div.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                <div>
+                    <span style="font-size: 11px; color: var(--text-muted); font-family: monospace;">ID: ${alertItem._id}</span>
+                    <div style="font-size: 13px; font-weight: 700; color: var(--danger); margin-top: 2px;">🚨 SOS Alert Triggered</div>
+                </div>
+                <span style="font-size: 12px; color: var(--text-muted);">${alertItem.timestamp}</span>
+            </div>
+            <div style="font-size: 14px; margin-bottom: 8px; background:var(--light); padding:8px; border-radius:4px; font-family:'Roboto';">
+                "${alertItem.message || ''}"
+            </div>
+            <div style="font-size:12px; margin-bottom: 8px;">
+                📍 Coordinates: <a href="${alertItem.google_maps_url}" target="_blank" style="color:var(--primary); text-decoration:underline;">${alertItem.latitude}, ${alertItem.longitude}</a>
+            </div>
+            
+            <div style="margin-top: 8px;">
+                <b style="font-size:12px; opacity:0.8;">Caregiver Dispatch Delivery:</b>
+                ${notificationsHtml || '<div style="font-size:11px; color:var(--text-muted); margin-top:4px;">No dispatch records found.</div>'}
+            </div>
+        `;
+        container.appendChild(div);
+    });
+}
+
+async function updateAlertStatusWeb(alertId, caregiverId, newStatus) {
+    try {
+        const response = await fetch(`${apiBase}/emergency/alerts/${alertId}/status`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ caregiver_id: caregiverId, status: newStatus })
+        });
+        if (!response.ok) {
+            alert("Failed to update status on the server.");
+        }
+    } catch (err) {
+        console.error("Error updating status:", err);
+    }
+}
+
+// ----------------------------------------------------
+// FIREBASE WEB MESSAGING & PUSH INTEGRATION
+// ----------------------------------------------------
+let messaging = null;
+
+async function initFirebaseWebPush() {
+    try {
+        if (typeof firebase === 'undefined') {
+            console.warn("Firebase SDK was not loaded correctly.");
+            return;
+        }
+
+        // Fetch the complete configuration from the backend dynamically
+        const response = await fetch(`${apiBase}/emergency/web-config`);
+        if (!response.ok) {
+            console.error("Failed to load Firebase Web Config from backend.");
+            return;
+        }
+        const firebaseConfig = await response.json();
+
+        // Verify and print all required config fields in the console immediately before initializeApp
+        console.log("==================================================");
+        console.log("INITIALIZING FIREBASE MESSAGING WITH CONFIG:");
+        console.log("apiKey:", firebaseConfig.apiKey);
+        console.log("authDomain:", firebaseConfig.authDomain);
+        console.log("projectId:", firebaseConfig.projectId);
+        console.log("storageBucket:", firebaseConfig.storageBucket);
+        console.log("messagingSenderId:", firebaseConfig.messagingSenderId);
+        console.log("appId:", firebaseConfig.appId);
+        console.log("measurementId:", firebaseConfig.measurementId);
+        console.log("==================================================");
+
+        firebase.initializeApp(firebaseConfig);
+        messaging = firebase.messaging();
+
+        if ('serviceWorker' in navigator) {
+            // Register service worker at root scope
+            const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+            console.log("Firebase Messaging Service Worker registered successfully: ", registration);
+
+            // Handle incoming foreground messages
+            messaging.onMessage((payload) => {
+                console.log("Foreground message received:", payload);
+                if (payload.notification) {
+                    alert(`🚨 EMERGENCY SOS ALERT:\n\n${payload.notification.title}\n${payload.notification.body}`);
+                }
+            });
+
+            // Request Notification Permission
+            if (Notification.permission === 'default') {
+                const permission = await Notification.requestPermission();
+                if (permission === 'granted') {
+                    await registerBrowserFCMToken();
+                }
+            } else if (Notification.permission === 'granted') {
+                await registerBrowserFCMToken();
+            }
+        }
+    } catch (err) {
+        console.error("Failed to initialize Firebase Web Push:", err);
+    }
+}
+
+async function registerBrowserFCMToken() {
+    try {
+        const token = await messaging.getToken({
+            vapidKey: "BMEikMlsRtiF5at84HH4SkbCKI8nceU9LOJMHvvD8TjSqv6Zjr9WeRUylp5bLYoLbtz1C95wW5aZf_QG15mZicI"
+        });
+        if (token) {
+            console.log("FCM registration token obtained successfully.");
+            console.log("==========================================");
+            console.log("REAL FCM REGISTRATION TOKEN:");
+            console.log(token);
+            console.log("==========================================");
+
+            localStorage.setItem('touchspeak_browser_fcm_token', token);
+            await syncBrowserTokenToCaregiver(token);
+        } else {
+            console.warn("Empty FCM token received from Firebase.");
+        }
+    } catch (err) {
+        console.error("Error retrieving FCM Web Token:", err);
+    }
+}
+
+async function syncBrowserTokenToCaregiver(token) {
+    if (!userId) return;
+    try {
+        const response = await fetch(`${apiBase}/users/${userId}/caregivers`);
+        if (response.ok) {
+            const caregivers = await response.json();
+
+            // Check if there is an existing Web Caregiver or general caregiver to register
+            let caregiver = caregivers.find(cg => cg.name === "Web Caregiver" || cg.relationship === "Web Browser");
+            if (!caregiver && caregivers.length > 0) {
+                // Default to the first caregiver in list
+                caregiver = caregivers[0];
+            }
+
+            if (caregiver) {
+                const regResp = await fetch(`${apiBase}/users/${userId}/caregivers/${caregiver._id}/register-token`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ fcm_token: token })
+                });
+                if (regResp.ok) {
+                    console.log(`Successfully registered browser FCM token to MongoDB for caregiver: ${caregiver.name}`);
+                    if (activeDashboardTab === 'caregivers') {
+                        loadDashboardCaregivers();
+                    }
+                }
+            } else {
+                console.log("No caregivers found, creating default Web Caregiver...");
+                const newCgResp = await fetch(`${apiBase}/users/${userId}/caregivers`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: "Web Caregiver",
+                        relationship: "Web Browser",
+                        phone: "+1999999999",
+                        email: "web_caregiver@example.com",
+                        fcm_token: token,
+                        notifications_enabled: true
+                    })
+                });
+                if (newCgResp.ok) {
+                    console.log("Automatically created Web Caregiver in MongoDB and synced FCM token.");
+                    if (activeDashboardTab === 'caregivers') {
+                        loadDashboardCaregivers();
+                    }
+                }
+            }
+        }
+    } catch (err) {
+        console.error("Failed to sync browser token to database:", err);
+    }
+}
+
+function fillBrowserToken() {
+    const token = localStorage.getItem('touchspeak_browser_fcm_token');
+    if (token) {
+        document.getElementById('cg-fcm-input').value = token;
+    } else {
+        alert("No browser FCM token generated yet. Check the console or allow notification permissions.");
+    }
 }

@@ -19,3 +19,6 @@ GoogleService-Info.plist
 # Misc
 .DS_Store
 *.log
+
+# Firebase
+firebase/firebase-admin.json

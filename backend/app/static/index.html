@@ -13,6 +13,10 @@
         rel="stylesheet">
     <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
 
+    <!-- Firebase SDK Compat -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging-compat.js"></script>
+
     <style>
         :root {
             --primary: #2A6FDB;
@@ -823,6 +827,10 @@
                     onclick="switchDashboardTab('categories')">Categories</button>
                 <button class="nav-tab" id="dashboard-cards-tab" onclick="switchDashboardTab('cards')">Cards &
                     Reordering</button>
+                <button class="nav-tab" id="dashboard-caregivers-tab"
+                    onclick="switchDashboardTab('caregivers')">Caregivers</button>
+                <button class="nav-tab" id="dashboard-alerts-tab" onclick="switchDashboardTab('alerts')">Emergency
+                    Alerts</button>
             </div>
 
             <!-- Category Edit Tab -->
@@ -997,6 +1005,103 @@
                         </thead>
                         <tbody id="cards-table-body"></tbody>
                     </table>
+                </div>
+            </div>
+
+            <!-- Caregivers Tab -->
+            <div id="dashboard-caregivers" class="dashboard-sect" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <h4 style="margin:0; font-size:16px;">Caregivers List</h4>
+                    <button class="dialog-btn" style="padding: 6px 12px; font-size: 14px;"
+                        onclick="showAddCaregiverForm()">+ Add New Caregiver</button>
+                </div>
+
+                <div id="caregiver-form-container"
+                    style="display: none; background-color: var(--light); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border); margin-bottom: 16px;">
+                    <h5 id="caregiver-form-title" style="margin: 0 0 8px 0; font-size: 14px; font-weight: 700;">Add New
+                        Caregiver</h5>
+                    <input type="hidden" id="cg-id-input">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div class="form-group" style="display:flex; flex-direction:column; gap:4px;">
+                            <label class="form-label" style="font-size:12px; font-weight:600; margin:0;">Caregiver Name
+                                *</label>
+                            <input type="text" id="cg-name-input" class="form-input"
+                                style="padding: 8px 12px; font-size:14px; box-sizing:border-box;">
+                        </div>
+                        <div class="form-group" style="display:flex; flex-direction:column; gap:4px;">
+                            <label class="form-label" style="font-size:12px; font-weight:600; margin:0;">Relationship
+                                *</label>
+                            <input type="text" id="cg-rel-input" class="form-input"
+                                style="padding: 8px 12px; font-size:14px; box-sizing:border-box;">
+                        </div>
+                        <div class="form-group" style="display:flex; flex-direction:column; gap:4px;">
+                            <label class="form-label" style="font-size:12px; font-weight:600; margin:0;">Phone Number
+                                *</label>
+                            <input type="text" id="cg-phone-input" class="form-input"
+                                style="padding: 8px 12px; font-size:14px; box-sizing:border-box;">
+                        </div>
+                        <div class="form-group" style="display:flex; flex-direction:column; gap:4px;">
+                            <label class="form-label" style="font-size:12px; font-weight:600; margin:0;">Email Address
+                                *</label>
+                            <input type="email" id="cg-email-input" class="form-input"
+                                style="padding: 8px 12px; font-size:14px; box-sizing:border-box;">
+                        </div>
+                        <div class="form-group"
+                            style="grid-column: span 2; display:flex; flex-direction:column; gap:4px;">
+                            <label class="form-label"
+                                style="font-size:12px; font-weight:600; margin:0; display:flex; justify-content:space-between; align-items:center;">
+                                <span>Firebase FCM Device Token (Optional)</span>
+                                <a href="javascript:void(0)" onclick="fillBrowserToken()"
+                                    style="color:var(--primary); text-decoration:none; font-weight:700;">[Use Browser
+                                    Token]</a>
+                            </label>
+                            <input type="text" id="cg-fcm-input" class="form-input"
+                                style="padding: 8px 12px; font-size:14px; box-sizing:border-box;">
+                        </div>
+                        <div class="form-group"
+                            style="grid-column: span 2; display: flex; align-items: center; gap: 8px; margin-top:8px;">
+                            <input type="checkbox" id="cg-notify-input" checked
+                                style="cursor: pointer; width: auto; margin: 0;">
+                            <label class="form-label" for="cg-notify-input"
+                                style="font-size:13px; cursor: pointer; margin-bottom: 0;">Enable Notifications</label>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 8px; margin-top: 12px; justify-content: flex-end;">
+                        <button class="dialog-btn"
+                            style="background-color: var(--border); color: var(--text-dark); padding: 6px 12px; font-size: 13px;"
+                            onclick="hideCaregiverForm()">Cancel</button>
+                        <button class="dialog-btn" style="padding: 6px 12px; font-size: 13px;"
+                            onclick="saveCaregiver()">Save</button>
+                    </div>
+                </div>
+
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                        <thead>
+                            <tr style="border-bottom: 2px solid var(--border); text-align: left; opacity:0.8;">
+                                <th style="padding: 8px;">Name</th>
+                                <th style="padding: 8px;">Relationship</th>
+                                <th style="padding: 8px;">Contact Info</th>
+                                <th style="padding: 8px;">FCM Token Status</th>
+                                <th style="padding: 8px; text-align: right;">Operations</th>
+                            </tr>
+                        </thead>
+                        <tbody id="caregivers-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Emergency Alerts Tab -->
+            <div id="dashboard-alerts" class="dashboard-sect" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <h4 style="margin: 0; font-size: 16px;">Emergency Alerts Tracking</h4>
+                    <button class="dialog-btn" style="padding: 6px 12px; font-size: 13px;"
+                        onclick="loadDashboardAlerts()">Refresh Logs</button>
+                </div>
+
+                <div id="alerts-container"
+                    style="display: flex; flex-direction: column; gap: 16px; max-height: 480px; overflow-y: auto; padding-right: 8px;">
+                    <!-- Alerts loaded dynamically -->
                 </div>
             </div>
         </div>

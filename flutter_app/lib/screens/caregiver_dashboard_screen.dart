@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
 
 import '../services/api_service.dart';
 import '../services/app_state.dart';
@@ -24,7 +25,9 @@ class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> wit
   List<dynamic> _categories = [];
   List<dynamic> _cards = [];
   List<dynamic> _history = [];
+  List<dynamic> _emergencyAlerts = [];
   String? _selectedCategoryForCards;
+
 
   // Icon mapping helper for display
   static final Map<String, IconData> _iconMap = {
@@ -51,7 +54,7 @@ class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> wit
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
     _tabController.addListener(() {
       if (_tabController.indexIsChanging) return;
       _refreshTab(_tabController.index);
@@ -88,6 +91,8 @@ class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> wit
         await _loadCards();
       } else if (index == 2) {
         await _loadHistory();
+      } else if (index == 3) {
+        await _loadEmergencyAlerts();
       }
     } catch (e) {
       if (mounted) {
@@ -125,6 +130,16 @@ class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> wit
       _history = hist;
     });
   }
+
+  Future<void> _loadEmergencyAlerts() async {
+    final userId = context.read<AppState>().userId;
+    if (userId == null) return;
+    final alerts = await ApiService.getEmergencyAlerts(userId);
+    setState(() {
+      _emergencyAlerts = alerts;
+    });
+  }
+
 
   IconData _getIcon(String name) {
     return _iconMap[name] ?? Icons.grid_view;
@@ -576,7 +591,7 @@ class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> wit
         title: const Text('Caregiver Dashboard'),
         backgroundColor: Theme.of(context).colorScheme.primaryContainer,
         bottom: TabController(
-          length: 4,
+          length: 5,
           child: TabBar(
             controller: _tabController,
             isScrollable: true,
@@ -584,6 +599,7 @@ class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> wit
               Tab(icon: Icon(Icons.category), text: 'Categories'),
               Tab(icon: Icon(Icons.grid_on), text: 'Cards'),
               Tab(icon: Icon(Icons.history_edu), text: 'History'),
+              Tab(icon: Icon(Icons.emergency), text: 'Emergency Alerts'),
               Tab(icon: Icon(Icons.admin_panel_settings), text: 'Caregiver Info'),
             ],
           ),
@@ -597,6 +613,7 @@ class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> wit
                 _buildCategoriesTab(),
                 _buildCardsTab(),
                 _buildHistoryTab(),
+                _buildEmergencyAlertsTab(),
                 _buildCaregiverInfoTab(),
               ],
             ),
@@ -819,14 +836,187 @@ class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> wit
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
             onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const CaregiverSettingsScreen()),
-              );
-            },
-            child: const Text('Edit Notification Details'),
-          )
-        ],
+               Navigator.of(context).push(
+                 MaterialPageRoute(builder: (_) => const CaregiverSettingsScreen()),
+               );
+             },
+             child: const Text('Edit Notification Details'),
+           )
+         ],
+       ),
+     );
+   }
+
+  Widget _buildEmergencyAlertsTab() {
+    return Scaffold(
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _refreshTab(3),
+        icon: const Icon(Icons.refresh),
+        label: const Text('Refresh'),
       ),
+      body: _emergencyAlerts.isEmpty
+          ? const Center(
+              child: Text(
+                'No emergency alerts logged.',
+                style: TextStyle(fontSize: 16, color: Colors.grey),
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 85),
+              itemCount: _emergencyAlerts.length,
+              itemBuilder: (context, idx) {
+                final alert = _emergencyAlerts[idx];
+                final String user = alert['user_name'] ?? 'A TouchSpeak User';
+                final String time = alert['timestamp'] ?? '';
+                final double lat = (alert['latitude'] as num?)?.toDouble() ?? 0.0;
+                final double lng = (alert['longitude'] as num?)?.toDouble() ?? 0.0;
+                final String mapsUrl = alert['google_maps_url'] ?? '';
+                final String currentStatus = alert['alert_status'] ?? 'Sent';
+                final List<dynamic> caregiverNotifs = alert['caregiver_notifications'] ?? [];
+
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 16.0),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 2,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              user,
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.red),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: _getStatusColor(currentStatus).withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: _getStatusColor(currentStatus)),
+                              ),
+                              child: Text(
+                                currentStatus,
+                                style: TextStyle(color: _getStatusColor(currentStatus), fontWeight: FontWeight.bold, fontSize: 13),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text('Time: $time', style: TextStyle(color: Colors.grey.shade700)),
+                        const SizedBox(height: 4),
+                        Text('Location: $lat, $lng', style: TextStyle(color: Colors.grey.shade700)),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Caregiver Notification Statuses:',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                        ),
+                        const SizedBox(height: 6),
+                        if (caregiverNotifs.isEmpty)
+                          const Text('No caregiver status details available.', style: TextStyle(color: Colors.grey, fontSize: 13))
+                        else
+                          Column(
+                            children: caregiverNotifs.map<Widget>((cn) {
+                              final String cgName = cn['name'] ?? 'Caregiver';
+                              final String notifSt = cn['notification_status'] ?? 'N/A';
+                              final String emailSt = cn['email_status'] ?? 'Skipped';
+                              final String cgSt = cn['status'] ?? 'Sent';
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 4.0),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.subdirectory_arrow_right, size: 16, color: Colors.grey),
+                                    const SizedBox(width: 4),
+                                    Expanded(
+                                      child: Text(
+                                        '$cgName (FCM: $notifSt, Email: $emailSt, Status: $cgSt)',
+                                        style: const TextStyle(fontSize: 13),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        const SizedBox(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            if (mapsUrl.isNotEmpty)
+                              ElevatedButton.icon(
+                                icon: const Icon(Icons.map, size: 18, color: Colors.white),
+                                label: const Text('Google Maps', style: TextStyle(color: Colors.white)),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.blue,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                                onPressed: () async {
+                                  final uri = Uri.parse(mapsUrl);
+                                  if (await canLaunchUrl(uri)) {
+                                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                                  }
+                                },
+                              ),
+                            DropdownButton<String>(
+                              value: currentStatus,
+                              hint: const Text('Update Status'),
+                              items: const [
+                                DropdownMenuItem(value: 'Sent', child: Text('Sent')),
+                                DropdownMenuItem(value: 'Delivered', child: Text('Delivered')),
+                                DropdownMenuItem(value: 'Viewed', child: Text('Viewed')),
+                                DropdownMenuItem(value: 'Acknowledged', child: Text('Acknowledged')),
+                                DropdownMenuItem(value: 'Resolved', child: Text('Resolved')),
+                              ],
+                              onChanged: (newStatus) {
+                                if (newStatus != null) {
+                                  _updateStatus(alert['_id'], newStatus);
+                                }
+                              },
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
     );
   }
+
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'Sent':
+        return Colors.blue;
+      case 'Delivered':
+        return Colors.green;
+      case 'Viewed':
+        return Colors.purple;
+      case 'Acknowledged':
+        return Colors.orange;
+      case 'Resolved':
+        return Colors.grey;
+      default:
+        return Colors.black;
+    }
+  }
+
+  Future<void> _updateStatus(String alertId, String status) async {
+    setState(() => _loading = true);
+    try {
+      await ApiService.updateAlertStatus(alertId, null, status);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Alert status updated to $status.')),
+      );
+      await _loadEmergencyAlerts();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to update status: $e')),
+      );
+      setState(() => _loading = false);
+    }
+  }
 }
+

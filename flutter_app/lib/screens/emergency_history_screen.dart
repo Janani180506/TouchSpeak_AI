@@ -132,7 +132,7 @@ class _EmergencyHistoryScreenState extends State<EmergencyHistoryScreen> {
                         final caregiverName = log['caregiver_name'] ?? 'N/A';
                         final mapsUrl = log['google_maps_url'] ?? '';
                         final nStatus = log['notification_status'] ?? 'Failed';
-                        final eStatus = log['email_status'] ?? 'Not Sent';
+                        final eStatus = log['email_status'] ?? 'Skipped';
 
                         return Card(
                           margin: const EdgeInsets.only(bottom: 12),

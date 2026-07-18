@@ -224,5 +224,85 @@ class ApiService {
     }
     return jsonDecode(response.body) as Map<String, dynamic>;
   }
+
+  // --- Caregiver CRUD & Notification APIs ---
+
+  static Future<List<dynamic>> getCaregivers(String userId) async {
+    final res = await http.get(Uri.parse('${AppState.apiBaseUrl}/users/$userId/caregivers'));
+    if (res.statusCode != 200) {
+      throw Exception(jsonDecode(res.body)['error'] ?? 'Failed to load caregivers');
+    }
+    return jsonDecode(res.body) as List<dynamic>;
+  }
+
+  static Future<Map<String, dynamic>> addCaregiver(String userId, Map<String, dynamic> data) async {
+    final res = await http.post(
+      Uri.parse('${AppState.apiBaseUrl}/users/$userId/caregivers'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(data),
+    );
+    if (res.statusCode != 201) {
+      throw Exception(jsonDecode(res.body)['error'] ?? 'Failed to add caregiver');
+    }
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
+  static Future<Map<String, dynamic>> updateCaregiver(String userId, String caregiverId, Map<String, dynamic> data) async {
+    final res = await http.put(
+      Uri.parse('${AppState.apiBaseUrl}/users/$userId/caregivers/$caregiverId'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(data),
+    );
+    if (res.statusCode != 200) {
+      throw Exception(jsonDecode(res.body)['error'] ?? 'Failed to update caregiver');
+    }
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
+  static Future<Map<String, dynamic>> deleteCaregiver(String userId, String caregiverId) async {
+    final res = await http.delete(
+      Uri.parse('${AppState.apiBaseUrl}/users/$userId/caregivers/$caregiverId'),
+    );
+    if (res.statusCode != 200) {
+      throw Exception(jsonDecode(res.body)['error'] ?? 'Failed to delete caregiver');
+    }
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
+  static Future<Map<String, dynamic>> registerCaregiverToken(String userId, String caregiverId, String token) async {
+    final res = await http.post(
+      Uri.parse('${AppState.apiBaseUrl}/users/$userId/caregivers/$caregiverId/register-token'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'fcm_token': token}),
+    );
+    if (res.statusCode != 200) {
+      throw Exception(jsonDecode(res.body)['error'] ?? 'Failed to register caregiver token');
+    }
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
+  static Future<List<dynamic>> getEmergencyAlerts(String userId) async {
+    final res = await http.get(Uri.parse('${AppState.apiBaseUrl}/emergency/alerts/$userId'));
+    if (res.statusCode != 200) {
+      throw Exception(jsonDecode(res.body)['error'] ?? 'Failed to load emergency alerts');
+    }
+    return jsonDecode(res.body) as List<dynamic>;
+  }
+
+  static Future<Map<String, dynamic>> updateAlertStatus(String alertId, String? caregiverId, String status) async {
+    final res = await http.put(
+      Uri.parse('${AppState.apiBaseUrl}/emergency/alerts/$alertId/status'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        if (caregiverId != null) 'caregiver_id': caregiverId,
+        'status': status
+      }),
+    );
+    if (res.statusCode != 200) {
+      throw Exception(jsonDecode(res.body)['error'] ?? 'Failed to update alert status');
+    }
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
 }
+
 
